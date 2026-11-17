@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rea-motion-manifest.schema.json",
+  "title": "Retarget Studio Game Motion Manifest",
+  "description": "Normalized handoff format from a game-specific extractor into the Retarget Studio asset library.",
+  "type": "object",
+  "required": ["schemaVersion", "source", "models", "motions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "source": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["mocap", "game-extraction", "keyed-animation", "mixed"] },
+        "gameId": { "type": "string" },
+        "gameBuild": { "type": "string" },
+        "extractor": { "type": "string" },
+        "extractorVersion": { "type": "string" },
+        "repository": { "type": "string", "format": "uri" },
+        "repositoryCommit": { "type": "string" },
+        "packagePath": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "species"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "species": { "enum": ["biped", "quadruped", "bird", "other"] },
+          "skeletonProfile": { "type": "string" },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "format"],
+              "properties": {
+                "path": { "type": "string" },
+                "format": { "type": "string" },
+                "sha256": { "type": "string" }
+              },
+              "additionalProperties": true
+            }
+          },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": true
+      }
+    },
+    "motions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "modelId", "name", "file", "action"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "modelId": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "file": {
+            "type": "object",
+            "required": ["path", "format"],
+            "properties": {
+              "path": { "type": "string" },
+              "format": { "type": "string" },
+              "sha256": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
+          "fps": { "type": "number", "exclusiveMinimum": 0 },
+          "frameCount": { "type": "integer", "minimum": 1 },
+          "weapon": { "enum": ["none", "greatsword", "bow", "other"] },
+          "action": { "enum": ["locomotion", "daily", "attack", "death", "flight", "other"] },
+          "subaction": { "type": "string" },
+          "direction": { "type": "string" },
+          "loop": { "type": "boolean" },
+          "rootMotion": { "type": "boolean" },
+          "quality": { "type": "number", "minimum": 0, "maximum": 100 },
+          "origin": { "enum": ["mocap", "game-extraction", "keyed-animation"] },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "sourceAssetId": { "type": "string" },
+              "packagePath": { "type": "string" },
+              "sha256": { "type": "string" },
+              "evidence": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

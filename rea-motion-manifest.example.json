@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "kind": "game-extraction",
+    "gameId": "SampleActionGame",
+    "gameBuild": "example-build",
+    "extractor": "sample-adapter",
+    "extractorVersion": "0.1.0",
+    "repository": "https://github.com/morluto/rea",
+    "repositoryCommit": "",
+    "packagePath": "sample/assets/characters"
+  },
+  "models": [
+    {
+      "id": "hero.knight",
+      "name": "Knight",
+      "species": "biped",
+      "skeletonProfile": "humanoid.game_v1",
+      "files": [
+        { "path": "characters/knight/model.fbx", "format": "fbx" }
+      ],
+      "tags": ["player", "greatsword"]
+    },
+    {
+      "id": "creature.wolf",
+      "name": "Wolf",
+      "species": "quadruped",
+      "skeletonProfile": "quadruped.wolf_v1",
+      "files": [
+        { "path": "characters/wolf/model.glb", "format": "glb" }
+      ],
+      "tags": ["creature", "enemy"]
+    }
+  ],
+  "motions": [
+    {
+      "id": "knight.greatsword.attack.horizontal",
+      "modelId": "hero.knight",
+      "name": "Greatsword Horizontal Slash",
+      "file": { "path": "characters/knight/anims/gs_slash_h.bin", "format": "game-specific" },
+      "fps": 30,
+      "frameCount": 36,
+      "weapon": "greatsword",
+      "action": "attack",
+      "subaction": "horizontal_slash",
+      "direction": "left_to_right",
+      "loop": false,
+      "rootMotion": true,
+      "quality": 88,
+      "tags": ["grounded", "combo_start"],
+      "provenance": {
+        "sourceAssetId": "anim_00421",
+        "packagePath": "sample/assets/characters/knight/anims/gs_slash_h.bin",
+        "evidence": "Sample entry; replace with extractor findings."
+      }
+    },
+    {
+      "id": "knight.greatsword.attack.diagonal_down",
+      "modelId": "hero.knight",
+      "name": "Greatsword Diagonal Down Slash",
+      "file": { "path": "characters/knight/anims/gs_slash_dd.bin", "format": "game-specific" },
+      "fps": 30,
+      "frameCount": 42,
+      "weapon": "greatsword",
+      "action": "attack",
+      "subaction": "diagonal_slash",
+      "direction": "top_right_to_bottom_left",
+      "loop": false,
+      "rootMotion": true,
+      "quality": 86,
+      "tags": ["grounded", "combo_followup"],
+      "provenance": { "sourceAssetId": "anim_00422" }
+    },
+    {
+      "id": "knight.bow.attack.draw_release",
+      "modelId": "hero.knight",
+      "name": "Bow Draw and Release",
+      "file": { "path": "characters/knight/anims/bow_fire.bin", "format": "game-specific" },
+      "fps": 30,
+      "frameCount": 72,
+      "weapon": "bow",
+      "action": "attack",
+      "subaction": "draw_release",
+      "direction": "forward",
+      "loop": false,
+      "rootMotion": false,
+      "quality": 92,
+      "tags": ["aim", "projectile"]
+    },
+    {
+      "id": "knight.daily.greeting",
+      "modelId": "hero.knight",
+      "name": "Greeting Wave",
+      "file": { "path": "characters/knight/anims/greeting.bin", "format": "game-specific" },
+      "fps": 30,
+      "frameCount": 48,
+      "weapon": "none",
+      "action": "daily",
+      "subaction": "greeting_wave",
+      "loop": false,
+      "rootMotion": false,
+      "tags": ["upper_body"]
+    },
+    {
+      "id": "wolf.locomotion.run",
+      "modelId": "creature.wolf",
+      "name": "Wolf Run Cycle",
+      "file": { "path": "characters/wolf/anims/run.bin", "format": "game-specific" },
+      "fps": 30,
+      "frameCount": 120,
+      "weapon": "none",
+      "action": "locomotion",
+      "subaction": "run",
+      "direction": "forward",
+      "loop": true,
+      "rootMotion": false,
+      "quality": 90,
+      "tags": ["quadruped", "cycle"]
+    },
+    {
+      "id": "knight.death.fall_forward",
+      "modelId": "hero.knight",
+      "name": "Death Fall Forward",
+      "file": { "path": "characters/knight/anims/death_fwd.bin", "format": "game-specific" },
+      "fps": 30,
+      "frameCount": 72,
+      "weapon": "greatsword",
+      "action": "death",
+      "subaction": "fall_forward",
+      "loop": false,
+      "rootMotion": true,
+      "quality": 89,
+      "tags": ["ground_contact"]
+    }
+  ]
+}

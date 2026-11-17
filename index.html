@@ -1,0 +1,1178 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111318">
+  <title>Retarget Studio — Motion Tool</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101116;
+      --panel: #17191f;
+      --panel-raised: #1d2028;
+      --panel-soft: #222630;
+      --border: #2b2f39;
+      --muted: #888e9d;
+      --text: #e8eaf0;
+      --accent: #b8f36b;
+      --accent-ink: #15200b;
+      --blue: #79a8ff;
+      --orange: #ffb56b;
+      --purple: #c09cff;
+      --red: #ff777e;
+      --radius: 9px;
+      font-family: Inter, "Segoe UI", "Noto Sans KR", sans-serif;
+      font-size: 12px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); min-width: 940px; height: 100vh; overflow: hidden; }
+    button, select, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .app { display: grid; grid-template-rows: 50px minmax(0, 1fr) 248px; height: 100vh; }
+    .topbar { display: flex; align-items: center; gap: 20px; padding: 0 16px; background: #15171c; border-bottom: 1px solid var(--border); }
+    .brand { display: flex; align-items: center; gap: 9px; min-width: 205px; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+    .brand-mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--accent); color: var(--accent-ink); font-weight: 900; }
+    .project-name { color: #b4b8c3; border-left: 1px solid var(--border); padding-left: 18px; white-space: nowrap; }
+    .topnav { display: flex; gap: 5px; margin-left: 8px; }
+    .topnav button, .icon-button, .quiet-button { border: 0; background: transparent; color: var(--muted); padding: 7px 9px; border-radius: 6px; }
+    .topnav button.active, .topnav button:hover, .icon-button:hover, .quiet-button:hover { background: #252832; color: var(--text); }
+    .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .status-dot { color: var(--accent); font-size: 10px; }
+    .status-label { color: var(--muted); margin-left: -5px; }
+    .button { border: 1px solid var(--border); background: var(--panel-raised); padding: 7px 10px; border-radius: 6px; color: var(--text); }
+    .button:hover { background: #2a2e39; }
+    .button.primary { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+    .button.primary:hover { filter: brightness(1.06); }
+    .button.small { padding: 5px 8px; font-size: 11px; }
+    .workspace { position: relative; display: grid; grid-template-columns: 274px minmax(360px, 1fr) 292px; min-height: 0; overflow: hidden; }
+    .sidebar, .inspector { background: var(--panel); min-height: 0; overflow: auto; }
+    .sidebar { border-right: 1px solid var(--border); }
+    .inspector { border-left: 1px solid var(--border); }
+    .section { padding: 14px 13px; border-bottom: 1px solid var(--border); }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .section-title { color: #c6c9d2; font-size: 11px; text-transform: uppercase; letter-spacing: .09em; font-weight: 700; }
+    .subtle { color: var(--muted); }
+    .tiny { font-size: 10px; }
+    .asset-card { display: flex; align-items: center; gap: 9px; background: var(--panel-raised); border: 1px solid var(--border); border-radius: 7px; padding: 9px; margin-bottom: 7px; }
+    .asset-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; background: #2b303a; color: var(--blue); font-size: 10px; font-weight: 700; }
+    .asset-card.target .asset-icon { color: var(--accent); }
+    .asset-meta { min-width: 0; flex: 1; }
+    .asset-name { font-size: 11px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .asset-detail { color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .asset-load { border: 0; background: transparent; color: var(--muted); font-size: 16px; padding: 1px 3px; }
+    .asset-load:hover { color: var(--text); }
+    .drop-note { border: 1px dashed #3a3f4b; border-radius: 7px; text-align: center; padding: 9px 6px; color: #777d8b; font-size: 10px; }
+    .map-progress { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; }
+    .progress-track { height: 4px; border-radius: 4px; background: #30343e; flex: 1; overflow: hidden; }
+    .progress-fill { height: 100%; width: 75%; background: var(--accent); border-radius: inherit; transition: width .2s; }
+    .map-row { display: grid; grid-template-columns: 1fr 17px 1fr; align-items: center; gap: 5px; margin: 7px 0; }
+    .map-row label { color: #bec2cc; font-size: 10px; }
+    .map-arrow { color: #687080; text-align: center; }
+    .map-select { min-width: 0; width: 100%; background: #20232b; border: 1px solid #30343e; border-radius: 5px; padding: 6px 5px; font-size: 10px; }
+    .map-select:focus, select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+    .auto-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .viewport { position: relative; min-width: 0; overflow: hidden; background: #101318; }
+    .viewport::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, #20252e 0%, #171a21 37%, #12151a 72%); }
+    .viewport-toolbar { position: absolute; z-index: 2; top: 12px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; }
+    .toolbar-group { display: flex; gap: 4px; align-items: center; background: #181b22dd; border: 1px solid #30343d; border-radius: 7px; padding: 3px; }
+    .toolbar-group button { border: 0; border-radius: 5px; padding: 6px 8px; color: #9da3b0; background: transparent; }
+    .toolbar-group button.selected, .toolbar-group button:hover { color: var(--text); background: #303540; }
+    .view-tools { display: flex; gap: 4px; }
+    .view-tools .icon-button { background: #181b22dd; border: 1px solid #30343d; }
+    .view-label { position: absolute; z-index: 1; left: 18px; bottom: 14px; color: #737b89; font-size: 10px; letter-spacing: .06em; }
+    .axis { position: absolute; right: 22px; bottom: 19px; width: 44px; height: 44px; border: 1px solid #363b46; border-radius: 50%; color: #87909e; display: grid; place-items: center; font-size: 10px; }
+    .axis::after { content: ""; position: absolute; height: 17px; width: 1px; background: #ff8585; top: 4px; left: 22px; transform: rotate(25deg); transform-origin: bottom; }
+    .stage { position: absolute; inset: 48px 0 0; display: grid; place-items: center; }
+    .character { height: min(74%, 540px); width: min(65%, 380px); overflow: visible; filter: drop-shadow(0 7px 24px #0008); }
+    .floor-grid { opacity: .68; }
+    .bone { stroke: #d9e1ed; stroke-width: 7; stroke-linecap: round; fill: none; opacity: .82; }
+    .bone.dim { stroke: #8793a3; stroke-width: 6; }
+    .joint { fill: #b8f36b; stroke: #192111; stroke-width: 3; }
+    .joint.dim { fill: #718094; }
+    .head { fill: #b9c5d4; opacity: .8; }
+    .dynamic-bone { stroke: #d9e1ed; stroke-width: 6; stroke-linecap: round; fill: none; opacity: .86; }
+    .dynamic-joint { fill: #b8f36b; stroke: #192111; stroke-width: 2; }
+    .dynamic-joint.end-site { fill: #79a8ff; }
+    .rig-control { fill: #11161b; stroke: #b8f36b; stroke-width: 2.5; }
+    .rig-control.aux { stroke: #c09cff; fill: #251d32; }
+    .foot-marker { fill: #79a8ff22; stroke: #79a8ff; stroke-width: 2; }
+    .contact-label { fill: #79a8ff; font-size: 10px; font-family: sans-serif; }
+    .viewport-hud { position: absolute; right: 17px; top: 63px; width: 113px; background: #171a21db; border: 1px solid #30343d; border-radius: 7px; padding: 8px; }
+    .hud-head { color: #abb1bd; font-size: 9px; letter-spacing: .08em; margin-bottom: 7px; }
+    .hud-line { display: flex; justify-content: space-between; color: #878e9d; font-size: 9px; padding: 3px 0; }
+    .hud-line b { font-weight: 500; color: #d0d4dc; }
+    .inspector-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 7px; }
+    .inspector-tabs button { flex: 1; padding: 12px 2px 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 9px; white-space: nowrap; }
+    .inspector-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .panel-content { padding: 14px; }
+    .panel-content[hidden] { display: none; }
+    .control-card { background: var(--panel-raised); border: 1px solid var(--border); border-radius: 7px; padding: 10px; margin: 10px 0; }
+    .control-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 9px 0; }
+    .control-row label { color: #b9beca; }
+    .control-row output { color: var(--accent); font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; height: 3px; accent-color: var(--accent); }
+    .slider-block { margin: 12px 0; }
+    .slider-block .control-row { margin-bottom: 6px; }
+    .check-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #292d36; color: #c5c9d2; }
+    .check-row:last-child { border-bottom: 0; }
+    .switch { position: relative; width: 30px; height: 17px; }
+    .switch input { position: absolute; opacity: 0; }
+    .switch span { position: absolute; inset: 0; border-radius: 12px; background: #3a3e48; cursor: pointer; transition: .2s; }
+    .switch span::after { content: ""; position: absolute; width: 11px; height: 11px; top: 3px; left: 3px; border-radius: 50%; background: #a1a6b1; transition: .2s; }
+    .switch input:checked + span { background: #63913c; }
+    .switch input:checked + span::after { transform: translateX(13px); background: var(--accent); }
+    .layer-card { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 8px; padding: 9px; border: 1px solid var(--border); background: var(--panel-raised); border-radius: 6px; margin: 6px 0; cursor: pointer; }
+    .layer-card.selected { border-color: #748f54; background: #20271d; }
+    .layer-color { width: 3px; height: 23px; border-radius: 3px; background: var(--accent); }
+    .layer-card:nth-of-type(2) .layer-color { background: var(--blue); }
+    .layer-card:nth-of-type(3) .layer-color { background: var(--purple); }
+    .layer-card small { display: block; color: var(--muted); margin-top: 3px; }
+    .layer-actions { color: #838997; font-size: 10px; }
+    .timeline { border-top: 1px solid var(--border); background: #15171c; display: grid; grid-template-rows: 42px minmax(0,1fr) 47px; min-height: 0; }
+    .timeline-head { display: flex; align-items: center; gap: 10px; padding: 0 15px; border-bottom: 1px solid var(--border); }
+    .story-title { font-weight: 700; letter-spacing: .04em; }
+    .shot-select { background: transparent; border: 0; color: #b7bdc8; }
+    .timeline-head .spacer { flex: 1; }
+    .fps { color: #858b99; font-size: 10px; }
+    .tracks { position: relative; overflow: auto hidden; padding-left: 120px; }
+    .ruler { height: 23px; border-bottom: 1px solid #2b2f38; position: relative; min-width: 690px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 1px), #2c3039 calc(10% - 1px), #2c3039 10%); }
+    .ruler span { position: absolute; top: 5px; color: #818795; font-size: 9px; transform: translateX(-50%); }
+    .track-row { display: flex; align-items: center; height: 39px; border-bottom: 1px solid #282c34; position: relative; min-width: 690px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 1px), #242831 calc(10% - 1px), #242831 10%); }
+    .track-name { position: absolute; left: -120px; top: 0; width: 120px; height: 38px; padding: 0 12px; display: flex; align-items: center; gap: 7px; color: #b5bac5; background: #191b21; border-right: 1px solid var(--border); font-size: 10px; }
+    .track-name em { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .track-row:nth-child(3) .track-name em { background: var(--blue); }
+    .track-row:nth-child(4) .track-name em { background: var(--purple); }
+    .clip { position: absolute; height: 25px; top: 6px; border-radius: 5px; padding: 6px 9px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: #40562c; border: 1px solid #789650; color: #e4f8cf; font-size: 10px; cursor: pointer; user-select: none; }
+    .clip.blue { background: #253d59; border-color: #4e77a8; color: #d5e7ff; }
+    .clip.purple { background: #49345c; border-color: #8565a6; color: #ebdcff; }
+    .clip.selected { outline: 1px solid #e7f8d6; box-shadow: 0 0 0 2px #b8f36b44; }
+    .playhead { position: absolute; z-index: 4; top: 0; bottom: 0; left: calc(120px + (100% - 120px) * .18); width: 1px; background: #ff747c; pointer-events: none; }
+    .playhead::before { content: ""; position: absolute; left: -4px; top: 19px; width: 9px; height: 9px; background: #ff747c; transform: rotate(45deg); border-radius: 1px; }
+    .transport { display: flex; align-items: center; gap: 7px; border-top: 1px solid #2a2d35; padding: 0 14px; }
+    .transport button { border: 0; background: transparent; color: #b3b8c3; font-size: 14px; padding: 6px 8px; border-radius: 5px; }
+    .transport button:hover { background: #292c34; color: white; }
+    .transport .play { background: var(--accent); color: var(--accent-ink); width: 27px; height: 27px; padding: 0; font-size: 12px; font-weight: 700; }
+    .frame-readout { font-variant-numeric: tabular-nums; color: #dce0e8; margin-left: 7px; }
+    .frame-readout small { color: var(--muted); }
+    .scrub { flex: 1; margin: 0 14px; }
+    .chain-group { border: 1px solid var(--border); background: var(--panel-raised); border-radius: 7px; padding: 8px; margin: 8px 0; }
+    .chain-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+    .chain-head b { font-size: 10px; }
+    .chain-count { color: var(--orange); font-size: 9px; }
+    .chain-line { display: flex; align-items: center; gap: 3px; margin: 5px 0; white-space: nowrap; overflow: hidden; }
+    .chain-line small { width: 25px; color: var(--muted); font-size: 8px; flex: 0 0 25px; }
+    .chain-node { color: #c7cbd4; background: #2a2e38; border-radius: 4px; padding: 4px 5px; font-size: 8px; overflow: hidden; text-overflow: ellipsis; }
+    .chain-line.target .chain-node { color: #d7efbb; background: #2b3a20; }
+    .chain-arrow { color: #707887; font-size: 9px; }
+    .chain-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
+    .chain-settings select { width: 100%; font-size: 9px; padding: 5px 4px; }
+    .chain-note { color: #959baa; background: #20232b; border-radius: 5px; padding: 7px; margin-top: 7px; font-size: 9px; line-height: 1.5; }
+    .chain-note b { color: var(--accent); font-weight: 600; }
+    .chain-preview { margin-top: 8px; padding: 7px; border: 1px solid #343944; border-radius: 6px; background: #15181e; }
+    .chain-preview-result { color: #d6dfca; font: 9px/1.55 ui-monospace, Consolas, monospace; margin-top: 6px; }
+    .curve-box { border: 1px solid var(--border); background: #12151a; border-radius: 6px; padding: 7px; margin: 10px 0; }
+    .curve-box svg { width: 100%; height: 85px; display: block; }
+    .key-mark { position: absolute; width: 7px; height: 7px; background: #ffd66b; transform: rotate(45deg); top: 16px; z-index: 2; box-shadow: 0 0 0 2px #ffd66b33; }
+    .library-screen, .export-screen { position: absolute; inset: 0; z-index: 6; background: #121419; display: grid; grid-template-rows: 57px minmax(0,1fr); }
+    .library-screen[hidden], .export-screen[hidden] { display: none; }
+    .single-stage { grid-template-rows: 50px minmax(0,1fr) 0; }
+    .single-stage .timeline { display: none; }
+    .screen-head { display: flex; align-items: center; gap: 13px; padding: 0 18px; border-bottom: 1px solid var(--border); background: #17191f; }
+    .screen-head h2 { margin: 0; font-size: 13px; letter-spacing: .07em; }
+    .screen-head .subtle { font-size: 10px; }
+    .screen-head .spacer { flex: 1; }
+    .library-layout { display: grid; grid-template-columns: 235px minmax(0,1fr); min-height: 0; }
+    .library-filters { border-right: 1px solid var(--border); padding: 16px; overflow: auto; background: #17191f; }
+    .filter-field { margin: 13px 0; }
+    .filter-field label { display: block; color: #aeb3bf; font-size: 10px; margin-bottom: 6px; }
+    .filter-field input, .filter-field select { width: 100%; background: #20232b; border: 1px solid #30343e; border-radius: 5px; padding: 8px; font-size: 10px; }
+    .filter-chip { display: inline-block; border: 1px solid #3b414d; color: #c0c5d0; border-radius: 12px; padding: 4px 7px; margin: 3px 2px 0 0; font-size: 9px; }
+    .library-content { padding: 16px 18px; overflow: auto; }
+    .group-cards { display: grid; grid-template-columns: repeat(4, minmax(135px,1fr)); gap: 9px; margin-bottom: 16px; }
+    .group-card { background: var(--panel); border: 1px solid var(--border); border-radius: 7px; padding: 11px; cursor: pointer; }
+    .group-card:hover, .group-card.active { border-color: #6e8e4a; background: #20261c; }
+    .group-card b { font-size: 10px; }
+    .group-card small { display: block; color: var(--muted); margin-top: 5px; font-size: 9px; }
+    .library-table-wrap { border: 1px solid var(--border); border-radius: 7px; overflow: auto; }
+    .library-table { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 10px; }
+    .library-table th { background: #1d2027; color: #9299a7; text-align: left; font-weight: 600; padding: 10px 9px; white-space: nowrap; }
+    .library-table td { border-top: 1px solid #292d36; padding: 10px 9px; color: #c6cad3; white-space: nowrap; }
+    .library-table tr:hover td { background: #1c2026; }
+    .library-table tr[hidden] { display: none; }
+    .tag-pill { background: #292d37; border-radius: 4px; padding: 3px 5px; color: #c4c9d4; font-size: 9px; }
+    .tag-pill.green { background: #2b3d21; color: #d7efbb; }
+    .quality { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .label-editor { margin-top: 12px; }
+    .label-editor[hidden] { display: none; }
+    .label-editor .export-fields { grid-template-columns: repeat(3,minmax(130px,1fr)); }
+    .export-layout { display: grid; grid-template-columns: minmax(440px,1fr) 360px; gap: 16px; padding: 20px; overflow: auto; }
+    .export-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .export-card h3 { margin: 0 0 14px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .export-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .export-fields .filter-field { margin: 0; }
+    .check-item { display: flex; gap: 9px; align-items: flex-start; border-bottom: 1px solid #292d36; padding: 10px 0; color: #c4c8d2; font-size: 10px; }
+    .check-item:last-child { border-bottom: 0; }
+    .check-ok { color: var(--accent); }
+    .check-warn { color: var(--orange); }
+    .workflow-hint { font-size: 9px; color: #858c9a; margin-left: 3px; }
+    .motion-count { color: var(--accent); font-size: 10px; }
+    .ingest-details { margin-top: 9px; border: 1px solid #30343e; border-radius: 6px; background: #1b1e25; }
+    .ingest-details summary { cursor: pointer; list-style: none; padding: 8px; color: #bfc4ce; font-size: 10px; }
+    .ingest-details summary::-webkit-details-marker { display: none; }
+    .ingest-details[open] summary { border-bottom: 1px solid #30343e; }
+    .ingest-body { padding: 5px 8px 9px; }
+    .demo-badge { position: absolute; z-index: 1; left: 17px; top: 52px; color: #747c89; font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
+    .toast { position: fixed; z-index: 20; bottom: 265px; left: 50%; transform: translate(-50%, 12px); opacity: 0; pointer-events: none; background: #242832; border: 1px solid #424754; color: #e7eaf0; border-radius: 7px; padding: 10px 14px; box-shadow: 0 8px 25px #0008; transition: .2s; }
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+    @media (max-width: 1120px) { .workspace { grid-template-columns: 245px minmax(320px,1fr) 270px; } .brand { min-width: 150px; } .project-name { display: none; } .topnav button { padding: 6px 5px; font-size: 10px; } .top-actions { gap: 4px; } .export-layout { grid-template-columns: minmax(360px,1fr) 300px; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">R</span><span>RETARGET STUDIO</span></div>
+      <div class="project-name">Untitled Project <span class="subtle">⌄</span></div>
+      <nav class="topnav" aria-label="제작 단계">
+        <button data-stage="ingest">01 가져오기</button><button class="active" data-stage="retarget">02 리타게팅</button><button data-stage="edit">03 키 편집</button><button data-stage="library">04 모션 분류</button><button data-stage="export">05 검수·출력</button>
+      </nav>
+      <div class="top-actions">
+        <span class="status-dot">●</span><span class="status-label">저장됨</span>
+        <button class="icon-button" title="실행 취소">↶</button><button class="icon-button" title="다시 실행">↷</button>
+        <button class="button" id="saveProjectBtn">프로젝트 설정 저장</button><button class="button primary" id="exportBtn">내보내기</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar">
+        <section class="section">
+          <div class="section-head"><span class="section-title">Characters</span><button class="quiet-button tiny" id="clearFiles">초기화</button></div>
+          <div class="asset-card">
+            <div class="asset-icon">SRC</div><div class="asset-meta"><div class="asset-name" id="sourceName">Walk_Cycle.bvh</div><div class="asset-detail" id="sourceInfo">Source · 30 fps · 180 frames</div></div>
+            <button class="asset-load" data-file="source" title="소스 파일 선택">＋</button>
+          </div>
+          <div class="asset-card target">
+            <div class="asset-icon">TGT</div><div class="asset-meta"><div class="asset-name" id="targetName">Hero_Rig.glb</div><div class="asset-detail" id="targetInfo">Target · 24 bones</div></div>
+            <button class="asset-load" data-file="target" title="타깃 파일 선택">＋</button>
+          </div>
+          <div class="drop-note">모션 또는 캐릭터 파일을 여기에 놓기</div>
+          <input id="sourceInput" type="file" accept=".bvh,.fbx,.glb,.gltf" hidden>
+          <input id="targetInput" type="file" accept=".bvh,.fbx,.glb,.gltf,.blend" hidden>
+          <details class="ingest-details" id="ingestDetails">
+            <summary>모캡 / 소스 테이크 정리</summary>
+            <div class="ingest-body">
+              <div class="control-row"><label>모션 출처</label><select id="sourceOrigin" class="map-select" style="width:112px"><option value="mocap">모캡</option><option value="game">게임 모션</option><option value="keyed">키 애니메이션</option></select></div>
+              <div class="control-row"><label>샘플링 FPS</label><select class="map-select" style="width:112px"><option>원본 유지</option><option>24 fps</option><option>30 fps</option><option>60 fps</option></select></div>
+              <div class="check-row"><span>마커 끊김 구간 보간</span><label class="switch"><input type="checkbox"><span></span></label></div>
+              <div class="check-row"><span>노이즈 / 지터 완화</span><label class="switch"><input type="checkbox"><span></span></label></div>
+              <div class="check-row"><span>Root 방향과 바닥 기준 정렬</span><label class="switch"><input type="checkbox" checked><span></span></label></div>
+            </div>
+          </details>
+        </section>
+        <section class="section">
+          <div class="section-head"><span class="section-title">Bone Mapping</span><button class="button small" id="autoMap">자동 매핑</button></div>
+          <div class="auto-row"><span class="subtle">휴머노이드 · Custom map</span><span class="map-progress"><span id="mapCount">18 / 24</span><span class="progress-track"><span class="progress-fill" id="mapProgress"></span></span></span></div>
+          <div id="mappingRows"></div>
+          <button class="quiet-button tiny" id="showAllBones">＋ 전체 본 매핑 보기</button>
+        </section>
+        <section class="section">
+          <div class="section-head"><span class="section-title">Chain Retargeting</span><span class="subtle tiny">길이 불일치 대응</span></div>
+          <div class="chain-group">
+            <div class="chain-head"><b>Spine</b><span class="chain-count">3 source → 5 target</span></div>
+            <div class="chain-line"><small>SRC</small><span class="chain-node">spine_01</span><span class="chain-arrow">›</span><span class="chain-node">spine_02</span><span class="chain-arrow">›</span><span class="chain-node">chest</span></div>
+            <div class="chain-line target"><small>TGT</small><span class="chain-node">spine_a</span><span class="chain-arrow">›</span><span class="chain-node">spine_b</span><span class="chain-arrow">›</span><span class="chain-node">spine_c</span><span class="chain-arrow">›</span><span class="chain-node">chest</span><span class="chain-arrow">›</span><span class="chain-node">upper</span></div>
+            <div class="chain-settings"><select id="spineMethod" class="map-select"><option value="length">Rest-length weighted</option><option value="even">Even distribution</option><option value="custom">Custom profile</option></select><select id="spineMode" class="map-select"><option>Rotation + position</option><option>Rotation only</option></select></div>
+          </div>
+          <div class="chain-group">
+            <div class="chain-head"><b>Neck</b><span class="chain-count">1 source → 2 target</span></div>
+            <div class="chain-line"><small>SRC</small><span class="chain-node">neck</span><span class="chain-arrow">›</span><span class="chain-node">head</span></div>
+            <div class="chain-line target"><small>TGT</small><span class="chain-node">neck_01</span><span class="chain-arrow">›</span><span class="chain-node">neck_02</span><span class="chain-arrow">›</span><span class="chain-node">head</span></div>
+            <div class="chain-settings"><select id="neckMethod" class="map-select"><option value="length">Rest-length weighted</option><option value="even">Even distribution</option><option value="custom">Custom profile</option></select><select id="neckMode" class="map-select"><option>Rotation + position</option><option>Rotation only</option></select></div>
+          </div>
+          <div class="check-row"><span>체인 양끝 방향 보존</span><label class="switch"><input id="preserveChainEnds" type="checkbox" checked><span></span></label></div>
+          <div class="chain-note"><b>체인 단위로 재분배</b><br>Rest pose와 체인 길이를 기준으로 누적 회전을 대상 본에 샘플링합니다. 본 수가 달라도 척추·목 움직임을 부드럽게 나누고 양끝 방향을 유지합니다.</div>
+          <div class="chain-preview"><div class="control-row"><span class="subtle tiny">예시 포즈 · 3 → 5 segment solve</span><button class="button small" id="previewChainBtn">분배 계산</button></div><div class="chain-preview-result" id="chainSolvePreview">대상 세그먼트별 회전량을 계산하려면 누르세요.</div></div>
+        </section>
+        <section class="section">
+          <div class="section-head"><span class="section-title">Retarget Setup</span><span class="subtle">⌄</span></div>
+          <div class="control-row"><label for="rootMotion">Root motion</label><select id="rootMotion" class="map-select" style="width:118px"><option>Apply to root</option><option>In-place</option><option>Extract</option></select></div>
+          <div class="control-row"><label for="axisPreset">Up axis</label><select id="axisPreset" class="map-select" style="width:118px"><option>Y Up</option><option>Z Up</option></select></div>
+          <div class="control-row"><label for="scaleMode">Scale</label><select id="scaleMode" class="map-select" style="width:118px"><option>Auto fit</option><option>Preserve source</option><option>Manual</option></select></div>
+          <div class="control-row"><label for="referencePose">Reference pose</label><select id="referencePose" class="map-select" style="width:118px"><option>Rest pose</option><option>A-Pose</option><option>T-Pose</option><option>Current frame</option></select></div>
+          <div class="check-row"><span>좌우 모션 미러</span><label class="switch"><input id="mirrorMotion" type="checkbox"><span></span></label></div>
+          <button class="button primary" style="width:100%; margin-top:5px" id="retargetBtn">▶ &nbsp;리타게팅 미리보기</button>
+        </section>
+      </aside>
+
+      <section class="viewport" aria-label="3D 뷰포트">
+        <div class="demo-badge">Viewport · UI prototype</div>
+        <div class="viewport-toolbar">
+          <div class="toolbar-group"><button class="selected" data-view="Perspective">Perspective</button><button data-view="Front">Front</button><button data-view="Side">Side</button></div>
+          <div class="view-tools"><button class="icon-button" id="toggleRig" title="컨트롤 리그 표시">◎ Rig</button><button class="icon-button" id="toggleContacts" title="접촉 마커 표시">◇ Contact</button><button class="icon-button" title="프레임 맞춤">⌖</button></div>
+        </div>
+        <div class="stage">
+          <svg class="character" viewBox="0 0 400 560" role="img" aria-label="휴머노이드 리그 미리보기">
+            <defs><pattern id="grid" width="34" height="22" patternUnits="userSpaceOnUse"><path d="M 34 0 L 0 0 0 22" fill="none" stroke="#737d8c" stroke-opacity=".2" stroke-width=".7"/></pattern></defs>
+            <path class="floor-grid" d="M25 442 L375 442 L490 550 L-90 550 Z" fill="url(#grid)"/>
+            <path d="M25 442 L375 442" stroke="#7d8795" stroke-opacity=".55" stroke-width="1"/>
+            <g id="skeleton">
+              <ellipse class="head" cx="200" cy="80" rx="24" ry="31"/>
+              <path class="bone" d="M200 112 L200 177 L200 233"/>
+              <path class="bone" d="M150 150 L200 139 L250 150"/>
+              <path class="bone dim" d="M150 150 L112 208 L91 269 L72 293"/><path class="bone dim" d="M250 150 L288 208 L309 269 L328 293"/>
+              <path class="bone" d="M164 237 L144 315 L151 388 L145 443 L119 450"/><path class="bone" d="M236 237 L256 315 L249 388 L255 443 L281 450"/>
+              <path class="bone dim" d="M164 237 L200 247 L236 237"/>
+              <circle class="joint" cx="200" cy="139" r="7"/><circle class="joint" cx="200" cy="177" r="6"/><circle class="joint" cx="200" cy="233" r="8"/>
+              <circle class="joint dim" cx="150" cy="150" r="7"/><circle class="joint dim" cx="250" cy="150" r="7"/>
+              <circle class="joint dim" cx="112" cy="208" r="6"/><circle class="joint dim" cx="288" cy="208" r="6"/><circle class="joint dim" cx="91" cy="269" r="6"/><circle class="joint dim" cx="309" cy="269" r="6"/>
+              <circle class="joint" cx="164" cy="237" r="7"/><circle class="joint" cx="236" cy="237" r="7"/><circle class="joint" cx="144" cy="315" r="6"/><circle class="joint" cx="256" cy="315" r="6"/><circle class="joint" cx="151" cy="388" r="6"/><circle class="joint" cx="249" cy="388" r="6"/>
+              <circle class="rig-control" cx="200" cy="233" r="12"/><circle class="rig-control" cx="145" cy="443" r="8"/><circle class="rig-control" cx="255" cy="443" r="8"/>
+              <circle class="rig-control aux" id="auxLeft" cx="118" cy="450" r="7"/><circle class="rig-control aux" id="auxRight" cx="282" cy="450" r="7"/>
+              <g id="contactMarkers"><ellipse class="foot-marker" cx="139" cy="450" rx="33" ry="11"/><ellipse class="foot-marker" cx="261" cy="450" rx="33" ry="11"/><text class="contact-label" x="105" y="475">L FOOT</text><text class="contact-label" x="249" y="475">R FOOT</text></g>
+            </g>
+            <g id="dynamicSkeleton" style="display:none"></g>
+          </svg>
+        </div>
+        <div class="viewport-hud"><div class="hud-head">CHARACTER STATUS</div><div class="hud-line"><span>Rig</span><b>Humanoid</b></div><div class="hud-line"><span>Mapping</span><b id="hudMap">75%</b></div><div class="hud-line"><span>Contact</span><b id="hudContact">Enabled</b></div><div class="hud-line"><span>Frame</span><b id="hudFrame">0001</b></div></div>
+        <div class="view-label">GRID  ·  Y UP  ·  1 UNIT = 1 CM</div><div class="axis">Y</div>
+      </section>
+
+      <aside class="inspector">
+        <div class="inspector-tabs"><button class="active" data-tab="rigPanel">Rig</button><button data-tab="contactPanel">Contact</button><button data-tab="layerPanel">Layers</button><button data-tab="keyPanel">Keys</button></div>
+        <div class="panel-content" id="rigPanel">
+          <div class="section-head"><span class="section-title">IK / FK Blend</span><span class="subtle tiny">Character: Hero</span></div>
+          <div class="control-card">
+            <div class="slider-block"><div class="control-row"><label>IK Blend · Translation</label><output id="ikTValue">100%</output></div><input type="range" min="0" max="100" value="100" data-output="ikTValue"></div>
+            <div class="slider-block"><div class="control-row"><label>IK Blend · Rotation</label><output id="ikRValue">100%</output></div><input type="range" min="0" max="100" value="100" data-output="ikRValue"></div>
+            <div class="control-row"><label>Effector space</label><select class="map-select" style="width:112px"><option>Character</option><option>World</option><option>Parent</option></select></div>
+          </div>
+          <div class="section-head"><span class="section-title">Aux Effectors</span><button class="button small" id="addEffector">＋ 추가</button></div>
+          <div class="control-card" id="effectorCard">
+            <div class="control-row"><label>Left Foot Aux</label><span class="subtle tiny">● Active</span></div>
+            <div class="slider-block"><div class="control-row"><label>Reach blend</label><output id="reachValue">70%</output></div><input type="range" min="0" max="100" value="70" data-output="reachValue"></div>
+            <div class="control-row"><label>Maintain offset</label><label class="switch"><input type="checkbox" checked><span></span></label></div>
+          </div>
+          <div class="subtle tiny">Aux effectors can keep hands on props or lock feet during a planted step.</div>
+        </div>
+        <div class="panel-content" id="contactPanel" hidden>
+          <div class="section-head"><span class="section-title">Floor Contact</span><span class="subtle tiny">Solver</span></div>
+          <div class="check-row"><span>Feet Floor Contact</span><label class="switch"><input id="feetContact" type="checkbox" checked><span></span></label></div>
+          <div class="check-row"><span>Hands Floor Contact</span><label class="switch"><input type="checkbox"><span></span></label></div>
+          <div class="control-card">
+            <div class="control-row"><label>Contact behavior</label><select id="contactBehavior" class="map-select" style="width:110px"><option>Sync on Key</option><option>Always Sync</option><option>Never Sync</option></select></div>
+            <div class="slider-block"><div class="control-row"><label>Detection height</label><output id="detectValue">4.0 cm</output></div><input type="range" min="0" max="10" value="4" data-output="detectValue" data-suffix=" cm"></div>
+            <div class="slider-block"><div class="control-row"><label>Plant strength</label><output id="plantValue">85%</output></div><input type="range" min="0" max="100" value="85" data-output="plantValue"></div>
+            <div class="slider-block"><div class="control-row"><label>Toe roll</label><output id="toeValue">18°</output></div><input type="range" min="0" max="45" value="18" data-output="toeValue" data-suffix="°"></div>
+          </div>
+          <div class="control-row"><label>Contact markers</label><label class="switch"><input id="markersToggle" type="checkbox" checked><span></span></label></div>
+          <div class="subtle tiny" style="line-height:1.6">발바닥과 바닥의 접촉 구간을 기준으로 발 미끄러짐과 관통을 보정합니다.</div>
+        </div>
+        <div class="panel-content" id="layerPanel" hidden>
+          <div class="section-head"><span class="section-title">Motion Layers</span><button class="button small" id="addLayer">＋ 레이어</button></div>
+          <div id="layerList">
+            <div class="layer-card selected" data-layer="Base Motion"><span class="layer-color"></span><div>Base Motion<small>Override · full body</small></div><span class="layer-actions">◉　⋯</span></div>
+            <div class="layer-card" data-layer="Foot Lock"><span class="layer-color"></span><div>Foot Lock<small>Additive · lower body</small></div><span class="layer-actions">◉　⋯</span></div>
+            <div class="layer-card" data-layer="Hand Offset"><span class="layer-color"></span><div>Hand Offset<small>Additive · arms</small></div><span class="layer-actions">◉　⋯</span></div>
+          </div>
+          <div class="control-card"><div class="control-row"><label>Selected layer weight</label><output id="layerWeightValue">100%</output></div><input id="layerWeight" type="range" min="0" max="100" value="100"></div>
+          <div class="check-row"><span>Solo selected layer</span><label class="switch"><input id="soloLayer" type="checkbox"><span></span></label></div>
+          <div class="check-row"><span>Mute selected layer</span><label class="switch"><input id="muteLayer" type="checkbox"><span></span></label></div>
+        </div>
+        <div class="panel-content" id="keyPanel" hidden>
+          <div class="section-head"><span class="section-title">Key Editor</span><span class="subtle tiny" id="keyCount">24 keys</span></div>
+          <div class="control-row"><label>Selected bone</label><select class="map-select" style="width:125px"><option>Hips</option><option>Spine</option><option>Neck</option><option>Left Foot</option><option>Right Hand</option></select></div>
+          <div class="control-row"><label>Channel</label><select class="map-select" style="width:125px"><option>Rotation · Z</option><option>Rotation · X</option><option>Rotation · Y</option><option>Position · X</option><option>Position · Y</option><option>Position · Z</option></select></div>
+          <div class="curve-box"><div class="control-row"><span class="subtle tiny">FCurve · selected channel</span><span class="subtle tiny">Frame 1–120</span></div><svg viewBox="0 0 240 82" preserveAspectRatio="none" aria-label="키프레임 곡선"><path d="M18 68H232 M18 12V68" stroke="#343945" stroke-width="1"/><path d="M18 52 C43 52 47 20 76 24 S112 60 137 48 S174 17 197 26 S219 40 232 17" fill="none" stroke="#b8f36b" stroke-width="2"/><g fill="#ffd66b"><circle cx="18" cy="52" r="3"/><circle cx="76" cy="24" r="3"/><circle cx="137" cy="48" r="3"/><circle cx="197" cy="26" r="3"/><circle cx="232" cy="17" r="3"/></g></svg></div>
+          <div class="control-card">
+            <div class="control-row"><label>Key interpolation</label><select class="map-select" style="width:112px"><option>Bezier</option><option>Linear</option><option>Constant</option></select></div>
+            <div class="control-row"><label>Reduce redundant keys</label><button class="button small" id="reduceKeys">정리</button></div>
+            <div class="control-row"><label>Smooth selected keys</label><button class="button small" id="smoothKeys">스무딩</button></div>
+            <div class="control-row"><label>Noise filter</label><select class="map-select" style="width:112px"><option>Light</option><option>Medium</option><option>Strong</option></select></div>
+          </div>
+          <button class="button primary" id="insertKey" style="width:100%">＋ 현재 프레임에 키 추가</button>
+          <div class="subtle tiny" style="line-height:1.6;margin-top:9px">포즈 키, 커브 보정, 불필요 키 제거와 접촉 구간별 정리는 실제 키 데이터 연결 후 적용됩니다.</div>
+        </div>
+      </aside>
+
+      <section class="library-screen" id="libraryScreen" hidden>
+        <header class="screen-head"><h2>MOTION LIBRARY</h2><span class="motion-count" id="visibleMotionCount">8 motions</span><span class="subtle" id="manifestStatus">예시 분류 데이터</span><span class="spacer"></span><input id="libraryImportInput" type="file" accept=".bvh,.fbx,.glb,.gltf" hidden><input id="manifestInput" type="file" accept=".json,application/json" hidden><button class="button" id="exportLibraryJson">카탈로그 JSON</button><button class="button" id="newModelGroup">＋ 모델 그룹</button><button class="button" id="importManifest">추출 결과 연결</button><button class="button primary" id="importMotion">모션 가져오기</button></header>
+        <div class="library-layout">
+          <aside class="library-filters">
+            <div class="section-title">분류 필터</div>
+            <div class="filter-field"><label for="motionSearch">검색</label><input id="motionSearch" type="search" placeholder="모션, 본, 태그 검색"></div>
+            <div class="filter-field"><label for="groupFilter">연결 모델 그룹</label><select id="groupFilter"><option value="">전체 그룹</option><option value="hero">Hero · Biped</option><option value="knight">Knight · Biped</option><option value="wolf">Wolf · Quadruped</option><option value="hawk">Hawk · Bird</option></select></div>
+            <div class="filter-field"><label for="speciesFilter">종 / 리그 유형</label><select id="speciesFilter"><option value="">전체</option><option value="biped">2족</option><option value="quadruped">4족</option><option value="bird">새</option></select></div>
+            <div class="filter-field"><label for="weaponFilter">무기 / 장비</label><select id="weaponFilter"><option value="">전체</option><option value="greatsword">대검</option><option value="bow">활</option><option value="none">비무장</option></select></div>
+            <div class="filter-field"><label for="actionFilter">행동 분류</label><select id="actionFilter"><option value="">전체</option><option value="daily">일상</option><option value="attack">공격</option><option value="death">죽음</option><option value="locomotion">이동</option><option value="flight">비행</option></select></div>
+            <div class="filter-field"><label for="detailFilter">세부 동작 / 방향</label><select id="detailFilter"><option value="">전체</option><option value="horizontal">가로 베기</option><option value="diagonal">대각선 베기</option><option value="drawrelease">활 당기고 발사</option><option value="greeting">인사</option><option value="walk">보행</option><option value="run">달리기</option><option value="takeoff">이륙</option><option value="fall">전방 낙법</option></select></div>
+            <div class="filter-field"><label for="originFilter">출처</label><select id="originFilter"><option value="">전체</option><option value="mocap">모캡</option><option value="game">게임 모션</option><option value="keyed">키 애니메이션</option></select></div>
+            <div class="section-title" style="margin-top:18px">분류 태그 예시</div><span class="filter-chip">대검</span><span class="filter-chip">2족</span><span class="filter-chip">공격</span><span class="filter-chip">가로 베기</span><span class="filter-chip">루프 가능</span>
+            <div class="chain-note" style="margin-top:14px"><b>게임 에셋 확장</b><br>추출 데이터는 출처와 원본 모델 ID를 보존해 기존 모델 그룹과 모션 라벨 체계에 연결합니다.</div>
+          </aside>
+          <div class="library-content">
+            <div class="section-head"><span class="section-title">Linked Model Groups</span><span class="subtle tiny">캐릭터 모델과 관련 모션을 함께 관리</span></div>
+            <div class="group-cards">
+              <div class="group-card" data-group-card="hero" data-model-file="Hero_Rig.glb"><b>Hero · Humanoid</b><small>2족 · 12 motions · Hero_Rig.glb</small></div>
+              <div class="group-card" data-group-card="knight" data-model-file="Knight_Rig.fbx"><b>Knight · Greatsword</b><small>2족 · 18 motions · Knight_Rig.fbx</small></div>
+              <div class="group-card" data-group-card="wolf" data-model-file="Wolf_Rig.glb"><b>Wolf · Quadruped</b><small>4족 · 7 motions · Wolf_Rig.glb</small></div>
+              <div class="group-card" data-group-card="hawk" data-model-file="Hawk_Rig.glb"><b>Hawk · Bird</b><small>새 · 3 motions · Hawk_Rig.glb</small></div>
+            </div>
+            <div class="section-head"><span class="section-title">Motions</span><span class="subtle tiny">종 · 무기 · 행동 · 세부 동작 · 출처 태그</span></div>
+            <div class="library-table-wrap"><table class="library-table"><thead><tr><th>모션 에셋</th><th>모델 그룹</th><th>종</th><th>무기</th><th>행동</th><th>세부 분류</th><th>출처</th><th>FPS / 프레임</th><th>Cycle / Root</th><th>품질</th><th></th></tr></thead>
+              <tbody id="motionRows">
+                <tr data-group="hero" data-species="biped" data-weapon="none" data-action="locomotion" data-detail="walk" data-origin="mocap"><td>Walk_Cycle.bvh</td><td>Hero</td><td><span class="tag-pill">2족</span></td><td>비무장</td><td>이동</td><td>전진 보행 · 루프</td><td>모캡</td><td class="quality">94%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+                <tr data-group="knight" data-species="biped" data-weapon="greatsword" data-action="attack" data-detail="horizontal" data-origin="game"><td>Greatsword_Horizontal.fbx</td><td>Knight</td><td><span class="tag-pill">2족</span></td><td><span class="tag-pill green">대검</span></td><td>공격</td><td>가로 베기</td><td>게임 모션</td><td class="quality">88%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+                <tr data-group="knight" data-species="biped" data-weapon="greatsword" data-action="attack" data-detail="diagonal" data-origin="game"><td>Greatsword_DiagonalDown.fbx</td><td>Knight</td><td><span class="tag-pill">2족</span></td><td><span class="tag-pill green">대검</span></td><td>공격</td><td>대각선 내려베기</td><td>게임 모션</td><td class="quality">86%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+                <tr data-group="hero" data-species="biped" data-weapon="bow" data-action="attack" data-detail="drawrelease" data-origin="mocap"><td>Bow_DrawRelease.bvh</td><td>Hero</td><td><span class="tag-pill">2족</span></td><td><span class="tag-pill green">활</span></td><td>공격</td><td>당기기 → 발사</td><td>모캡</td><td class="quality">92%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+                <tr data-group="hero" data-species="biped" data-weapon="none" data-action="daily" data-detail="greeting" data-origin="game"><td>Greeting_Wave.fbx</td><td>Hero</td><td><span class="tag-pill">2족</span></td><td>비무장</td><td>일상</td><td>손 흔들어 인사</td><td>게임 모션</td><td class="quality">97%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+                <tr data-group="wolf" data-species="quadruped" data-weapon="none" data-action="locomotion" data-detail="run" data-origin="mocap"><td>Wolf_RunCycle.bvh</td><td>Wolf</td><td><span class="tag-pill">4족</span></td><td>비무장</td><td>이동</td><td>달리기 · 루프</td><td>모캡</td><td class="quality">90%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+                <tr data-group="hawk" data-species="bird" data-weapon="none" data-action="flight" data-detail="takeoff" data-origin="game"><td>Hawk_Takeoff.fbx</td><td>Hawk</td><td><span class="tag-pill">새</span></td><td>비무장</td><td>비행</td><td>지면에서 이륙</td><td>게임 모션</td><td class="quality">84%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+                <tr data-group="knight" data-species="biped" data-weapon="greatsword" data-action="death" data-detail="fall" data-origin="game"><td>Death_FallForward.fbx</td><td>Knight</td><td><span class="tag-pill">2족</span></td><td><span class="tag-pill green">대검</span></td><td>죽음</td><td>전방으로 쓰러짐</td><td>게임 모션</td><td class="quality">89%</td><td><button class="quiet-button tiny use-motion">＋ Story</button></td></tr>
+              </tbody>
+            </table></div>
+            <div class="export-card label-editor" id="motionLabelEditor" hidden>
+              <div class="section-head"><h3 style="margin:0">모션 라벨 편집</h3><span class="subtle tiny" id="editingMotionName">선택된 모션 없음</span></div>
+              <div class="export-fields">
+                <div class="filter-field"><label for="labelModelGroup">연결 모델 그룹</label><select id="labelModelGroup"></select></div>
+                <div class="filter-field"><label for="labelModelName">모델 표시 이름</label><input id="labelModelName"></div>
+                <div class="filter-field"><label for="labelSpecies">종 / 리그 유형</label><select id="labelSpecies"><option value="biped">2족</option><option value="quadruped">4족</option><option value="bird">새</option><option value="other">기타</option></select></div>
+                <div class="filter-field"><label for="labelWeapon">무기 / 장비</label><select id="labelWeapon"><option value="none">비무장</option><option value="greatsword">대검</option><option value="bow">활</option><option value="other">기타</option></select></div>
+                <div class="filter-field"><label for="labelAction">행동</label><select id="labelAction"><option value="locomotion">이동</option><option value="daily">일상</option><option value="attack">공격</option><option value="death">죽음</option><option value="flight">비행</option><option value="other">기타</option></select></div>
+                <div class="filter-field"><label for="labelSubaction">세부 동작</label><input id="labelSubaction" placeholder="horizontal_slash"></div>
+                <div class="filter-field"><label for="labelDirection">방향 / 방향성</label><input id="labelDirection" placeholder="left_to_right"></div>
+                <div class="filter-field"><label for="labelOrigin">출처</label><select id="labelOrigin"><option value="mocap">모캡</option><option value="game">게임 추출</option><option value="keyed">키 애니메이션</option></select></div>
+                <div class="filter-field"><label for="labelQuality">품질 점수</label><input id="labelQuality" type="number" min="0" max="100" placeholder="0–100"></div>
+                <div class="filter-field"><label for="labelTags">추가 태그</label><input id="labelTags" placeholder="grounded, combo_start"></div>
+              </div>
+              <div style="display:flex;gap:16px;margin:12px 0 14px">
+                <div class="check-row" style="flex:1"><span>Loop</span><label class="switch"><input id="labelLoop" type="checkbox"><span></span></label></div>
+                <div class="check-row" style="flex:1"><span>Root motion</span><label class="switch"><input id="labelRootMotion" type="checkbox"><span></span></label></div>
+              </div>
+              <button class="button primary" id="saveMotionLabels">라벨 저장</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="export-screen" id="exportScreen" hidden>
+        <header class="screen-head"><h2>VALIDATE & EXPORT</h2><span class="subtle">모션을 검수하고 대상 포맷으로 출력</span><span class="spacer"></span><span class="motion-count">Hero_Rig · 120 frames · 24 fps</span></header>
+        <div class="export-layout">
+          <div class="export-card">
+            <h3>출력 설정</h3>
+            <div class="export-fields">
+              <div class="filter-field"><label for="exportFormat">파일 형식</label><select id="exportFormat"><option selected>BVH · Motion</option><option>FBX · Animation</option><option>glTF · GLB</option><option>USD · Animation</option></select></div>
+              <div class="filter-field"><label for="exportPreset">대상 프리셋</label><select id="exportPreset"><option>Generic / Blender</option><option>Unreal Engine</option><option>Unity Humanoid</option><option>Custom Skeleton</option></select></div>
+              <div class="filter-field"><label for="exportName">파일명</label><input id="exportName" value="Hero_Walk_Retarget_v01"></div>
+              <div class="filter-field"><label for="exportRange">프레임 범위</label><input id="exportRange" value="1 – 120"></div>
+              <div class="filter-field"><label for="exportFps">샘플링 FPS</label><select id="exportFps"><option>원본 유지</option><option>24 fps</option><option>30 fps</option><option>60 fps</option></select></div>
+              <div class="filter-field"><label for="exportAxis">축 / 단위</label><select id="exportAxis"><option>Y Up · Centimeters</option><option>Z Up · Centimeters</option><option>Y Up · Meters</option></select></div>
+            </div>
+            <div class="check-row"><span>Control Rig 키를 스켈레톤에 Bake</span><label class="switch"><input type="checkbox" checked><span></span></label></div>
+            <div class="check-row"><span>Root motion 포함</span><label class="switch"><input type="checkbox" checked><span></span></label></div>
+            <div class="check-row"><span>레이어와 접촉 보정을 합성</span><label class="switch"><input type="checkbox" checked><span></span></label></div>
+            <div class="check-row"><span>중복 키 압축</span><label class="switch"><input type="checkbox" checked><span></span></label></div>
+            <div class="filter-field" style="margin-top:14px"><label for="exportPath">출력 위치</label><input id="exportPath" value="./exports/" readonly></div>
+            <button class="button primary" id="finalExportBtn" style="width:100%;margin-top:14px">최종 파일 출력</button>
+          </div>
+          <div class="export-card">
+            <h3>출력 전 검사</h3>
+            <div class="check-item"><span class="check-ok">●</span><span><b>필수 본 매핑</b><br><span class="subtle">필수 슬롯이 연결되어 있습니다.</span></span></div>
+            <div class="check-item"><span class="check-warn">●</span><span><b>선택 본 6개 미매핑</b><br><span class="subtle">손가락·롤 본은 필요 시 매핑하세요.</span></span></div>
+            <div class="check-item"><span class="check-ok">●</span><span><b>체인 매핑</b><br><span class="subtle">Spine 3→5, Neck 1→2 재분배 설정.</span></span></div>
+            <div class="check-item"><span class="check-ok">●</span><span><b>발 접촉</b><br><span class="subtle">발 고정 구간을 검토했습니다.</span></span></div>
+            <div class="check-item"><span class="check-warn">●</span><span><b>동작 메타데이터</b><br><span class="subtle">무기·종·행동 태그를 지정하면 라이브러리에서 다시 찾기 쉽습니다.</span></span></div>
+            <div class="chain-note"><b>Game asset connector</b><br>게임별 추출 어댑터는 추후 추가합니다. 현재 출력 UI는 설정 검토용이며 실제 파일 생성기는 아직 연결되지 않았습니다.</div>
+            <button class="button" id="validateBtn" style="width:100%;margin-top:12px">검사 다시 실행</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="timeline" aria-label="Story timeline">
+      <div class="timeline-head"><span class="story-title">STORY</span><select class="shot-select"><option>Shot_01 · Main Sequence</option><option>Shot_02 · Turnaround</option></select><button class="button small" id="addClip">＋ 클립</button><button class="button small" id="addTrack">＋ 트랙</button><span class="spacer"></span><span class="fps">24 fps</span><button class="quiet-button">⋯</button></div>
+      <div class="tracks" id="tracks">
+        <div class="playhead" id="playhead"></div>
+        <div class="ruler"><span style="left:0%">0</span><span style="left:20%">24</span><span style="left:40%">48</span><span style="left:60%">72</span><span style="left:80%">96</span><span style="left:100%">120</span></div>
+        <div class="track-row"><div class="track-name"><em></em> Base Motion</div><div class="clip selected" style="left:3%;width:28%">Walk_Cycle · 0–36</div><div class="clip" style="left:34%;width:26%">Turn · 40–72</div><div class="clip" style="left:63%;width:28%">Idle · 76–108</div></div>
+        <div class="track-row"><div class="track-name"><em></em> Foot Contact</div><div class="clip blue" style="left:5%;width:23%">Foot Lock · baked</div><div class="clip blue" style="left:35%;width:20%">Contact Pass</div></div>
+        <div class="track-row"><div class="track-name"><em></em> Hand Offset</div><div class="clip purple" style="left:42%;width:25%">Prop Reach · Aux L</div></div>
+      </div>
+      <div class="transport">
+        <button title="처음으로" id="goStart">|◀</button><button title="이전 프레임" id="prevFrame">◀</button><button class="play" id="playBtn" title="재생">▶</button><button title="다음 프레임" id="nextFrame">▶</button><button title="끝으로" id="goEnd">▶|</button>
+        <span class="frame-readout"><span id="frameNumber">0001</span> <small>/ 0120</small></span>
+        <input class="scrub" id="scrubber" type="range" min="1" max="120" value="22" aria-label="현재 프레임">
+        <button title="스토리 설정">⚙</button><span class="subtle tiny">Auto Key</span><label class="switch"><input type="checkbox" checked><span></span></label>
+      </div>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="./bvh-io.js"></script>
+  <script src="./retarget-core.js"></script>
+  <script src="./bvh-retarget.js"></script>
+  <script>
+    const toastEl = document.getElementById('toast');
+    let toastTimer;
+    function toast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+    }
+    let sourceMotion = null, targetSkeleton = null, retargetedMotion = null, retargetPreview = null, totalFrames = 120;
+    function downloadJson(value, filename) {
+      const blob = new Blob([JSON.stringify(value, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    function downloadText(value, filename, type = 'text/plain') {
+      const blob = new Blob([value], {type}); const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    const mapData = [
+      ['Hips', 'pelvis'], ['Spine', 'spine_01'], ['Chest', 'spine_03'], ['Neck', 'neck'],
+      ['Head', 'head'], ['Left Arm', 'upperarm_l'], ['Right Arm', 'upperarm_r'],
+      ['Left Leg', 'thigh_l'], ['Right Leg', 'thigh_r'], ['Left Foot', 'foot_l'], ['Right Foot', 'foot_r']
+    ];
+    const boneOptions = ['— 미지정 —','root','pelvis','spine_01','spine_02','spine_03','neck','head','clavicle_l','upperarm_l','lowerarm_l','hand_l','clavicle_r','upperarm_r','lowerarm_r','hand_r','thigh_l','calf_l','foot_l','toe_l','thigh_r','calf_r','foot_r','toe_r'];
+    const mappingRows = document.getElementById('mappingRows');
+    let expandedMap = false;
+    const mapAssignments = new Map(mapData);
+    function mappingChoices() { return sourceMotion ? ['— 미지정 —', ...sourceMotion.nodes.filter(node => node.type !== 'End Site').map(node => node.name)] : boneOptions; }
+    function renderMappings() {
+      const rows = expandedMap ? [...mapData, ['Left Hand','hand_l'], ['Right Hand','hand_r'], ['Left Toe','toe_l'], ['Right Toe','toe_r'], ['Left Calf','calf_l'], ['Right Calf','calf_r']] : mapData;
+      mappingRows.replaceChildren();
+      const choices = mappingChoices();
+      for (const [label, fallback] of rows) {
+        const line = document.createElement('div'); line.className = 'map-row';
+        const name = document.createElement('label'); name.textContent = label;
+        const arrow = document.createElement('span'); arrow.className = 'map-arrow'; arrow.textContent = '→';
+        const select = document.createElement('select'); select.className = 'map-select bone-select'; select.setAttribute('aria-label', `${label} 매핑`);
+        for (const choice of choices) select.add(new Option(choice, choice));
+        const selected = mapAssignments.get(label) || fallback;
+        select.value = choices.includes(selected) ? selected : '— 미지정 —';
+        mapAssignments.set(label, select.value);
+        select.addEventListener('change', () => { mapAssignments.set(label, select.value); updateMapProgress(); });
+        line.append(name, arrow, select); mappingRows.append(line);
+      }
+      updateMapProgress();
+    }
+    function updateMapProgress() {
+      const assigned = [...mapAssignments.values()].filter(value => value && value !== '— 미지정 —').length;
+      const mapped = Math.min(assigned, 24);
+      const percent = Math.round(mapped / 24 * 100);
+      document.getElementById('mapCount').textContent = `${mapped} / 24`;
+      document.getElementById('mapProgress').style.width = `${percent}%`;
+      document.getElementById('hudMap').textContent = `${percent}%`;
+    }
+    renderMappings();
+    const sampleClipStats = [[30,180,true,false],[30,36,false,true],[30,42,false,true],[30,72,false,true],[30,48,false,false],[30,120,true,false],[30,64,false,true],[30,72,false,true]];
+    [...document.querySelectorAll('#motionRows tr')].forEach((row, index) => {
+      const [fps, frames, loop, rootMotion] = sampleClipStats[index];
+      row.dataset.fps = fps; row.dataset.frames = frames; row.dataset.loop = loop; row.dataset.rootMotion = rootMotion;
+      row.dataset.motionId = `sample.motion.${index + 1}`; row.dataset.file = row.cells[0].textContent;
+      row.dataset.format = row.cells[0].textContent.split('.').pop().toLowerCase(); row.dataset.subaction = row.dataset.detail;
+      row.dataset.direction = ''; row.dataset.tags = '[]';
+      const timing = row.insertCell(7); timing.textContent = `${fps} / ${frames}`;
+      const flags = row.insertCell(8); flags.innerHTML = `${loop ? '<span class="tag-pill green">Loop</span>' : '<span class="tag-pill">One-shot</span>'} ${rootMotion ? '<span class="tag-pill">Root</span>' : '<span class="tag-pill">In Place</span>'}`;
+      const editButton = document.createElement('button'); editButton.className = 'quiet-button tiny edit-motion'; editButton.textContent = '라벨'; row.cells[10].append(editButton);
+    });
+    function autoMapBones() {
+      const nodes = (sourceMotion?.nodes || []).filter(node => node.type !== 'End Site');
+      if (!nodes.length) { for (const [label,value] of mapData) mapAssignments.set(label,value); renderMappings(); toast('BVH를 불러오면 파일의 실제 본 이름으로 자동 매핑할 수 있습니다.'); return; }
+      const normalize = value => value.toLowerCase().replace(/[^a-z0-9]/g,'');
+      const aliases = {
+        Hips:['hips','hip','pelvis','root'], Spine:['spine','spine1','spine01','abdomen'], Chest:['chest','upperchest','spine2','spine02','spine3','spine03'],
+        Neck:['neck'], Head:['head'], 'Left Arm':['leftarm','upperarmleft','leftupperarm','lupperarm','upperarml'], 'Right Arm':['rightarm','upperarmright','rightupperarm','rupperarm','upperarmr'],
+        'Left Leg':['leftupleg','leftthigh','thighleft','lthigh','thighl'], 'Right Leg':['rightupleg','rightthigh','thighright','rthigh','thighr'],
+        'Left Foot':['leftfoot','footleft','lfoot','footl'], 'Right Foot':['rightfoot','footright','rfoot','footr'],
+        'Left Hand':['lefthand','handleft','lhand','handl'], 'Right Hand':['righthand','handright','rhand','handr'],
+        'Left Toe':['lefttoe','toeleft','ltoe','toel'], 'Right Toe':['righttoe','toeright','rtoe','toer'],
+        'Left Calf':['leftleg','leftcalf','calfleft','lcalf','calfl'], 'Right Calf':['rightleg','rightcalf','calfright','rcalf','calfr']
+      };
+      const rows = [...mapData, ['Left Hand','hand_l'], ['Right Hand','hand_r'], ['Left Toe','toe_l'], ['Right Toe','toe_r'], ['Left Calf','calf_l'], ['Right Calf','calf_r']];
+      const used = new Set();
+      for (const [label] of rows) {
+        const matches = aliases[label] || [];
+        const found = matches.map(alias => nodes.find(node => !used.has(node.name) && normalize(node.name) === alias)).find(Boolean)
+          || nodes.find(node => !used.has(node.name) && matches.some(alias => normalize(node.name).startsWith(alias) || normalize(node.name).endsWith(alias)));
+        if (found) { mapAssignments.set(label,found.name); used.add(found.name); }
+      }
+      renderMappings(); toast('BVH 본 이름을 기준으로 자동 매핑했습니다. 결과를 확인하고 필요하면 직접 수정하세요.');
+    }
+    document.getElementById('autoMap').addEventListener('click', autoMapBones);
+    document.getElementById('showAllBones').addEventListener('click', (event) => { expandedMap = !expandedMap; event.currentTarget.textContent = expandedMap ? '− 주요 본만 보기' : '＋ 전체 본 매핑 보기'; renderMappings(); });
+
+    document.querySelectorAll('[data-file]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.file + 'Input').click()));
+    const svgNamespace = 'http://www.w3.org/2000/svg';
+    function viewportAxis() { return document.getElementById('axisPreset').value.toLowerCase().includes('z') ? 2 : 1; }
+    function buildBVHViewport(bvh) {
+      const group = document.getElementById('dynamicSkeleton'); group.replaceChildren();
+      bvh._visuals = [];
+      for (const node of bvh.nodes) {
+        if (node.parent) {
+          const line = document.createElementNS(svgNamespace,'line'); line.setAttribute('class','dynamic-bone'); group.append(line);
+          bvh._visuals.push({node,parent:node.parent,line});
+        }
+        if (node.type !== 'End Site') {
+          const joint = document.createElementNS(svgNamespace,'circle'); joint.setAttribute('class','dynamic-joint'); joint.setAttribute('r',node === bvh.root ? '7' : '4.5'); group.append(joint);
+          bvh._visuals.push({node,joint});
+        }
+      }
+      bvh._fitCache = {};
+      document.getElementById('skeleton').style.display = 'none'; group.style.display = '';
+    }
+    function renderBVHFrame(frameIndex) {
+      const bvh = retargetPreview || sourceMotion || targetSkeleton; if (!bvh) return;
+      if (!bvh._visuals) buildBVHViewport(bvh);
+      const up = viewportAxis(), fitKey = String(up), pose = BvhIO.poseAt(bvh, frameIndex);
+      const rootPosition = pose.get(bvh.root).position;
+      const project = node => { const position = pose.get(node).position; return [position[0] - rootPosition[0], position[up] - rootPosition[up]]; };
+      if (!bvh._fitCache[fitKey]) {
+        const points = bvh.nodes.map(project), xs = points.map(point => point[0]), ys = points.map(point => point[1]);
+        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+        const width = Math.max(maxX - minX, 1), height = Math.max(maxY - minY, 1);
+        bvh._fitCache[fitKey] = {scale:Math.min(320 / width, 430 / height), centerX:(minX + maxX) / 2, minY};
+      }
+      const fit = bvh._fitCache[fitKey];
+      const screen = node => { const [x,y] = project(node); return [200 + (x - fit.centerX) * fit.scale, 478 - (y - fit.minY) * fit.scale]; };
+      for (const visual of bvh._visuals) {
+        if (visual.line) { const [x1,y1] = screen(visual.parent), [x2,y2] = screen(visual.node); visual.line.setAttribute('x1',x1); visual.line.setAttribute('y1',y1); visual.line.setAttribute('x2',x2); visual.line.setAttribute('y2',y2); }
+        if (visual.joint) { const [cx,cy] = screen(visual.node); visual.joint.setAttribute('cx',cx); visual.joint.setAttribute('cy',cy); }
+      }
+      document.getElementById('hudFrame').textContent = String(frameIndex + 1).padStart(4,'0');
+      document.querySelector('.view-label').textContent = `${bvh.fileName || 'BVH'}  ·  ${bvh.nodes.length} BONES  ·  ${viewportAxis() === 2 ? 'Z UP' : 'Y UP'}`;
+    }
+    async function loadAsset(kind, file) {
+      if (!file) return;
+      document.getElementById(kind + 'Name').textContent = file.name;
+      if (file.name.toLowerCase().endsWith('.bvh')) {
+        try {
+          const bvh = BvhIO.parse(await file.text()); bvh.fileName = file.name;
+          if (kind === 'source') {
+            sourceMotion = bvh; retargetedMotion = null; retargetPreview = null; totalFrames = bvh.frameCount;
+            document.getElementById('sourceInfo').textContent = `Source · ${bvh.fps.toFixed(2)} fps · ${bvh.frameCount} frames · ${bvh.nodes.length} bones`;
+            document.getElementById('scrubber').max = totalFrames;
+            document.querySelector('.frame-readout small').textContent = `/ ${String(totalFrames).padStart(4,'0')}`;
+            document.querySelectorAll('.ruler span').forEach((mark,index) => mark.textContent = String(Math.round((totalFrames - 1) * index / 5)));
+            document.querySelector('.fps').textContent = `${bvh.fps.toFixed(2)} fps`;
+            document.getElementById('exportRange').value = `1 – ${totalFrames}`;
+            document.getElementById('exportName').value = `${file.name.replace(/\.[^.]+$/,'')}_Retarget`;
+            renderMappings(); autoMapBones();
+            buildBVHViewport(bvh); setFrame(1);
+          } else {
+            targetSkeleton = bvh; retargetedMotion = null; retargetPreview = null;
+            document.getElementById('targetInfo').textContent = `Target · ${bvh.nodes.length} bones · ${bvh.root.name}`;
+            if (!sourceMotion) { buildBVHViewport(bvh); renderBVHFrame(0); }
+          }
+          toast(`${file.name} BVH 읽기 완료 · ${bvh.nodes.length} bones`);
+        } catch (error) {
+          if (kind === 'source') {
+            sourceMotion = null; retargetedMotion = null; retargetPreview = null; totalFrames = 120;
+            document.getElementById('scrubber').max = totalFrames;
+            document.querySelector('.frame-readout small').textContent = '/ 0120';
+            renderMappings();
+            if (targetSkeleton) { buildBVHViewport(targetSkeleton); renderBVHFrame(0); }
+            else { document.getElementById('dynamicSkeleton').style.display = 'none'; document.getElementById('skeleton').style.display = ''; }
+            setFrame(1);
+          } else { targetSkeleton = null; retargetedMotion = null; retargetPreview = null; }
+          document.getElementById(kind + 'Info').textContent = 'BVH parse failed';
+          toast(`BVH 파일을 읽지 못했습니다: ${error.message}`);
+        }
+      } else {
+        document.getElementById(kind + 'Info').textContent = kind === 'source' ? 'Source · format parser not connected' : 'Target · format parser not connected';
+        toast(`${file.name} 선택됨 · 현재 실제 프레임 읽기는 BVH만 지원합니다.`);
+      }
+    }
+    for (const kind of ['source','target']) document.getElementById(kind + 'Input').addEventListener('change', event => loadAsset(kind,event.target.files[0]));
+    const dropNote = document.querySelector('.drop-note');
+    dropNote.addEventListener('dragover', event => { event.preventDefault(); dropNote.style.borderColor = 'var(--accent)'; });
+    dropNote.addEventListener('dragleave', () => { dropNote.style.borderColor = ''; });
+    dropNote.addEventListener('drop', event => {
+      event.preventDefault(); dropNote.style.borderColor = '';
+      const file = event.dataTransfer.files[0]; if (!file) return;
+      const kind = file.name.toLowerCase().endsWith('.bvh') ? 'source' : 'target';
+      loadAsset(kind,file);
+    });
+    document.getElementById('axisPreset').addEventListener('change', () => { const bvh = sourceMotion || targetSkeleton; if (bvh) { bvh._fitCache = {}; renderBVHFrame(Math.max(0, frame - 1)); } });
+    document.getElementById('clearFiles').addEventListener('click', () => {
+      sourceMotion = null; targetSkeleton = null; retargetedMotion = null; retargetPreview = null; totalFrames = 120;
+      document.getElementById('sourceInput').value = ''; document.getElementById('targetInput').value = '';
+      document.getElementById('sourceName').textContent = 'Walk_Cycle.bvh';
+      document.getElementById('targetName').textContent = 'Hero_Rig.glb';
+      document.getElementById('sourceInfo').textContent = 'Source · 30 fps · 180 frames';
+      document.getElementById('targetInfo').textContent = 'Target · 24 bones';
+      document.getElementById('scrubber').max = totalFrames;
+      document.querySelector('.frame-readout small').textContent = '/ 0120';
+      document.querySelector('.fps').textContent = '24 fps';
+      document.querySelectorAll('.ruler span').forEach((mark,index) => mark.textContent = String(24 * index));
+      for (const [label,value] of [...mapData,['Left Hand','hand_l'],['Right Hand','hand_r'],['Left Toe','toe_l'],['Right Toe','toe_r'],['Left Calf','calf_l'],['Right Calf','calf_r']]) mapAssignments.set(label,value); renderMappings();
+      document.getElementById('dynamicSkeleton').style.display = 'none'; document.getElementById('skeleton').style.display = '';
+      setFrame(1); toast('선택한 파일을 초기화했습니다.');
+    });
+    document.getElementById('retargetBtn').addEventListener('click', () => {
+      try {
+        if (!sourceMotion || !targetSkeleton) throw new Error('소스 BVH와 대상 BVH를 모두 불러오세요.');
+        const result = BvhRetarget.retarget(sourceMotion,targetSkeleton,Object.fromEntries(mapAssignments),{
+          scaleMode:document.getElementById('scaleMode').value,
+          rootMotion:document.getElementById('rootMotion').value,
+          spineDistribution:document.getElementById('spineMethod').value,
+          neckDistribution:document.getElementById('neckMethod').value
+        });
+        retargetedMotion = result; retargetPreview = {...targetSkeleton,frames:result.frames,frameCount:result.frames.length,frameTime:result.frameTime,fps:result.fps};
+        document.getElementById('scrubber').max = result.frames.length; totalFrames = result.frames.length;
+        document.querySelector('.frame-readout small').textContent = `/ ${String(totalFrames).padStart(4,'0')}`;
+        setFrame(1);
+        toast(`BVH 미리보기 완료 · ${result.mappedBoneCount}개 대상 본 · 미매핑 ${result.missing.length} 슬롯`);
+      } catch (error) { toast(`리타게팅을 시작하지 못했습니다: ${error.message}`); }
+    });
+    function activatePanel(panelId) {
+      const button = document.querySelector(`.inspector-tabs button[data-tab="${panelId}"]`);
+      if (button) button.click();
+    }
+    const appShell = document.querySelector('.app');
+    const libraryScreen = document.getElementById('libraryScreen');
+    const exportScreen = document.getElementById('exportScreen');
+    function setWorkflowStage(stage) {
+      document.querySelectorAll('.topnav button').forEach(item => item.classList.toggle('active', item.dataset.stage === stage));
+      const soloScreen = stage === 'library' || stage === 'export';
+      libraryScreen.hidden = stage !== 'library';
+      exportScreen.hidden = stage !== 'export';
+      appShell.classList.toggle('single-stage', soloScreen);
+      if (stage === 'ingest') {
+        document.getElementById('ingestDetails').open = true;
+        document.querySelector('.sidebar').scrollTo({top: 0, behavior: 'smooth'});
+      }
+      if (stage === 'retarget') activatePanel('rigPanel');
+      if (stage === 'edit') activatePanel('keyPanel');
+      if (stage === 'ingest') { activatePanel('rigPanel'); toast('소스 모션과 캐릭터를 불러오고 테이크를 정리합니다.'); }
+    }
+    document.querySelectorAll('.topnav button').forEach(button => button.addEventListener('click', () => setWorkflowStage(button.dataset.stage)));
+    document.getElementById('exportBtn').addEventListener('click', () => setWorkflowStage('export'));
+    document.getElementById('validateBtn').addEventListener('click', () => {
+      if (!sourceMotion || !targetSkeleton) { toast('검수 전에 소스 BVH와 대상 BVH를 불러오세요.'); return; }
+      if (!retargetedMotion) { toast('먼저 리타게팅 미리보기를 실행하세요.'); return; }
+      const missing = retargetedMotion.missing.filter(name => !['Left Hand','Right Hand','Left Toe','Right Toe','Left Calf','Right Calf'].includes(name));
+      toast(missing.length ? `검수 완료 · 필수 슬롯 ${missing.length}개 미매핑: ${missing.join(', ')}` : `검수 완료 · ${retargetedMotion.mappedBoneCount}개 대상 본 · ${retargetedMotion.frames.length} frames`);
+    });
+    document.getElementById('finalExportBtn').addEventListener('click', () => {
+      if (document.getElementById('exportFormat').value !== 'BVH · Motion') { toast('현재 다운로드 출력은 BVH 형식만 지원합니다.'); return; }
+      if (!retargetedMotion || !targetSkeleton) { toast('먼저 소스와 대상 BVH를 불러온 뒤 리타게팅 미리보기를 실행하세요.'); return; }
+      const range = [...document.getElementById('exportRange').value.matchAll(/\d+/g)].map(match => Number(match[0]));
+      const start = Math.max(1,Math.min(retargetedMotion.frames.length,range[0] || 1));
+      const end = Math.max(start,Math.min(retargetedMotion.frames.length,range[1] || retargetedMotion.frames.length));
+      const fpsText = document.getElementById('exportFps').value;
+      const outputFps = fpsText === '원본 유지' ? retargetedMotion.fps : Number(fpsText.match(/[\d.]+/)?.[0]) || retargetedMotion.fps;
+      const rotations = new Set();
+      for (const node of targetSkeleton.nodes) node.channels.forEach((channel,index) => { if (channel.toLowerCase().endsWith('rotation')) rotations.add(node.channelStart + index); });
+      const outputCount = Math.max(1,Math.round((end - start) * outputFps / retargetedMotion.fps) + 1), outputFrames = [];
+      for (let sample = 0; sample < outputCount; sample++) {
+        const position = Math.min(end - 1,(start - 1) + sample * retargetedMotion.fps / outputFps);
+        const left = Math.floor(position), right = Math.min(end - 1,left + 1), blend = position - left;
+        outputFrames.push(retargetedMotion.frames[left].map((value,index) => {
+          const next = retargetedMotion.frames[right][index];
+          if (!rotations.has(index)) return value + (next - value) * blend;
+          const difference = ((next - value + 540) % 360) - 180;
+          return value + difference * blend;
+        }));
+      }
+      const stem = document.getElementById('exportName').value.trim().replace(/[<>:"/\\|?*]+/g,'_') || 'RetargetedMotion';
+      const text = BvhIO.serialize(targetSkeleton,outputFrames,1 / outputFps);
+      downloadText(text,`${stem}.bvh`,'text/plain');
+      if (retargetedMotion.rootMotion) {
+        const track = retargetedMotion.rootMotion.slice(start - 1,end).map((translation,index) => ({frame:start + index,translation}));
+        setTimeout(() => downloadJson({fps:retargetedMotion.fps,rootMotion:track},`${stem}_RootMotion.json`),350);
+      }
+      document.querySelector('.export-screen .motion-count').textContent = `${targetSkeleton.fileName || 'Target BVH'} · ${outputFrames.length} frames · ${outputFps} fps`;
+      toast(`BVH 출력 완료 · ${outputFrames.length} frames · ${outputFps} fps`);
+    });
+    document.getElementById('saveProjectBtn').addEventListener('click', () => {
+      const project = {
+        schemaVersion: 1,
+        projectName: document.querySelector('.project-name').textContent.trim(),
+        source: {file: document.getElementById('sourceName').textContent, origin: document.getElementById('sourceOrigin').value},
+        target: {file: document.getElementById('targetName').textContent},
+        boneMap: [...mapAssignments.entries()].map(([slot,bone]) => ({slot,bone})),
+        chainRetarget: {spine: {sourceSegments: 3, targetSegments: 5, distribution: document.getElementById('spineMethod').value}, neck: {sourceSegments: 1, targetSegments: 2, distribution: document.getElementById('neckMethod').value}},
+        retargetSettings: {rootMotion: document.getElementById('rootMotion').value, upAxis: document.getElementById('axisPreset').value, scale: document.getElementById('scaleMode').value, referencePose: document.getElementById('referencePose').value, mirror: document.getElementById('mirrorMotion').checked},
+        story: {clips: [...document.querySelectorAll('.clip')].map(clip => clip.textContent), layers: [...document.querySelectorAll('#layerList .layer-card')].map(card => card.dataset.layer)},
+        note: 'Project settings only; no motion frames or source files are embedded.'
+      };
+      downloadJson(project, 'RetargetStudio_Project.json'); toast('프로젝트 설정 JSON을 저장했습니다.');
+    });
+    let currentManifest = null;
+    let selectedMotionRow = null;
+    document.getElementById('exportLibraryJson').addEventListener('click', () => {
+      const visibleRows = [...document.querySelectorAll('#motionRows tr:not([hidden])')];
+      let catalog;
+      if (currentManifest) {
+        const visibleIds = new Set(visibleRows.map(row => row.dataset.motionId));
+        catalog = JSON.parse(JSON.stringify(currentManifest));
+        catalog.motions = catalog.motions.filter(motion => visibleIds.has(motion.id));
+        const usedModels = new Set(catalog.motions.map(motion => motion.modelId));
+        catalog.models = catalog.models.filter(model => usedModels.has(model.id));
+      } else {
+        const models = new Map();
+        for (const row of visibleRows) if (!models.has(row.dataset.group)) models.set(row.dataset.group, {id: row.dataset.group, name: row.cells[1].textContent, species: row.dataset.species});
+        const motions = visibleRows.map(row => {
+          let tags = []; try { tags = JSON.parse(row.dataset.tags || '[]'); } catch {}
+          const quality = Number(row.cells[9].textContent.replace('%',''));
+          return {
+            id: row.dataset.motionId, modelId: row.dataset.group, name: row.cells[0].textContent,
+            file: {path: row.dataset.file, format: row.dataset.format}, fps: Number(row.dataset.fps) || undefined, frameCount: Number(row.dataset.frames) || undefined,
+            weapon: row.dataset.weapon, action: row.dataset.action, subaction: row.dataset.subaction, direction: row.dataset.direction || undefined,
+            origin: ({mocap:'mocap',game:'game-extraction',keyed:'keyed-animation'})[row.dataset.origin],
+            loop: row.dataset.loop === 'true', rootMotion: row.dataset.rootMotion === 'true',
+            quality: Number.isFinite(quality) ? quality : undefined, tags
+          };
+        });
+        catalog = {schemaVersion: 1, source: {kind: 'mixed', extractor: 'Retarget Studio catalog export'}, models: [...models.values()], motions};
+      }
+      downloadJson(catalog, 'RetargetStudio_MotionCatalog.json'); toast(`${catalog.motions.length}개 모션 분류를 manifest JSON으로 저장했습니다.`);
+    });
+
+    const filterIds = ['motionSearch','groupFilter','speciesFilter','weaponFilter','actionFilter','detailFilter','originFilter'];
+    const speciesLabels = {biped:'2족', quadruped:'4족', bird:'새', other:'기타'};
+    const weaponLabels = {none:'비무장', greatsword:'대검', bow:'활', other:'기타'};
+    const actionLabels = {locomotion:'이동', daily:'일상', attack:'공격', death:'죽음', flight:'비행', other:'기타'};
+    const originLabels = {mocap:'모캡', game:'게임 모션', keyed:'키 애니메이션'};
+    const displayLabel = (dictionary, value) => Object.hasOwn(dictionary, value) ? dictionary[value] : String(value || '기타').replace(/[_-]+/g, ' ');
+    const tagValue = value => String(value || 'other').trim().toLowerCase().replace(/\s+/g, '_');
+    function resetSelectOptions(id, allLabel, values, labeler) {
+      const select = document.getElementById(id); select.replaceChildren(new Option(allLabel, ''));
+      [...new Set(values)].filter(Boolean).sort().forEach(value => select.add(new Option(labeler(value), value)));
+    }
+    function tableCell(text, title = '') { const cell = document.createElement('td'); cell.textContent = text; if (title) cell.title = title; return cell; }
+    function importMotionManifest(manifest) {
+      if (manifest.schemaVersion !== 1 || !manifest.source || !Array.isArray(manifest.models) || !Array.isArray(manifest.motions)) throw new Error('지원하지 않는 manifest 형식입니다. schemaVersion 1의 models/motions 배열이 필요합니다.');
+      const modelById = new Map();
+      for (const model of manifest.models) {
+        if (!model || typeof model.id !== 'string' || !model.id.trim() || typeof model.name !== 'string' || !model.name.trim() || modelById.has(model.id)) throw new Error('모델 ID가 없거나 중복되었습니다.');
+        if (model.files !== undefined && !Array.isArray(model.files)) throw new Error(`모델 '${model.name}'의 files는 배열이어야 합니다.`);
+        if (model.tags !== undefined && !Array.isArray(model.tags)) throw new Error(`모델 '${model.name}'의 tags는 배열이어야 합니다.`);
+        modelById.set(model.id, model);
+      }
+      const motionIds = new Set();
+      for (const motion of manifest.motions) {
+        if (!motion || typeof motion.id !== 'string' || typeof motion.name !== 'string' || !motion.file || typeof motion.file.path !== 'string' || typeof motion.file.format !== 'string' || typeof motion.modelId !== 'string' || !modelById.has(motion.modelId)) throw new Error(`모션 '${motion?.name || motion?.id || 'unknown'}'의 파일 정보나 연결 모델이 올바르지 않습니다.`);
+        if (motionIds.has(motion.id)) throw new Error(`모션 ID '${motion.id}'가 중복되었습니다.`);
+        if (motion.tags !== undefined && !Array.isArray(motion.tags)) throw new Error(`모션 '${motion.name}'의 tags는 배열이어야 합니다.`);
+        motionIds.add(motion.id);
+      }
+      const sourceKinds = new Map([['game-extraction','game'],['keyed-animation','keyed'],['mocap','mocap']]);
+      const defaultOrigin = sourceKinds.get(manifest.source.kind) || '';
+      if (!defaultOrigin && manifest.source.kind !== 'mixed') throw new Error('source.kind는 mocap, game-extraction, keyed-animation, mixed 중 하나여야 합니다.');
+      if (manifest.motions.some(motion => motion.origin && !sourceKinds.has(motion.origin))) throw new Error('모션 origin 값이 지원되지 않습니다.');
+      const origins = manifest.motions.map(motion => sourceKinds.get(motion.origin) || defaultOrigin);
+      if (origins.some(value => !value)) throw new Error('mixed manifest의 각 모션에 origin을 지정해야 합니다.');
+      const speciesValues = [...new Set([...modelById.values()].map(model => Object.hasOwn(speciesLabels,model.species) ? model.species : 'other'))];
+      const weaponValues = [...new Set(manifest.motions.map(motion => Object.hasOwn(weaponLabels,motion.weapon) ? motion.weapon : 'other'))];
+      const actionValues = [...new Set(manifest.motions.map(motion => Object.hasOwn(actionLabels,motion.action) ? motion.action : 'other'))];
+      const details = [...new Set(manifest.motions.map(motion => tagValue(motion.subaction || motion.direction || 'other')))];
+      resetSelectOptions('groupFilter','전체 그룹',[...modelById.keys()],value => modelById.get(value)?.name || value);
+      resetSelectOptions('speciesFilter','전체',speciesValues,value => displayLabel(speciesLabels,value));
+      resetSelectOptions('weaponFilter','전체',weaponValues,value => displayLabel(weaponLabels,value));
+      resetSelectOptions('actionFilter','전체',actionValues,value => displayLabel(actionLabels,value));
+      resetSelectOptions('detailFilter','전체',details,value => displayLabel({},value));
+      resetSelectOptions('originFilter','전체',origins,value => displayLabel(originLabels,value));
+
+      const cards = document.querySelector('.group-cards'); cards.replaceChildren();
+      for (const model of modelById.values()) {
+        const count = manifest.motions.filter(motion => motion.modelId === model.id).length;
+        const modelFile = model.files?.[0]?.path || model.skeletonProfile || '모델 파일 미지정';
+        const card = document.createElement('div'); card.className = 'group-card'; card.dataset.groupCard = model.id; card.dataset.modelFile = modelFile;
+        const heading = document.createElement('b'); heading.textContent = model.name;
+        const detail = document.createElement('small'); detail.textContent = `${displayLabel(speciesLabels, model.species)} · ${count} motions · ${modelFile}`;
+        card.append(heading, detail); cards.append(card);
+      }
+      const rows = document.getElementById('motionRows'); rows.replaceChildren();
+      for (const [motionIndex, motion] of manifest.motions.entries()) {
+        const model = modelById.get(motion.modelId); const row = document.createElement('tr');
+        const origin = origins[motionIndex];
+        const species = Object.hasOwn(speciesLabels,model.species) ? model.species : 'other';
+        const weapon = Object.hasOwn(weaponLabels,motion.weapon) ? motion.weapon : 'other';
+        const action = Object.hasOwn(actionLabels,motion.action) ? motion.action : 'other';
+        const detailKey = tagValue(motion.subaction || motion.direction || 'other');
+        const fileName = String(motion.file.path).split(/[\\/]/).pop();
+        row.dataset.group = model.id; row.dataset.species = species; row.dataset.weapon = weapon; row.dataset.action = action;
+        row.dataset.detail = detailKey; row.dataset.origin = origin; row.dataset.fps = motion.fps || '';
+        row.dataset.frames = motion.frameCount || ''; row.dataset.loop = Boolean(motion.loop); row.dataset.rootMotion = Boolean(motion.rootMotion);
+        row.dataset.motionId = motion.id; row.dataset.file = motion.file.path; row.dataset.format = motion.file.format;
+        row.dataset.subaction = motion.subaction || ''; row.dataset.direction = motion.direction || ''; row.dataset.tags = JSON.stringify(motion.tags || []);
+        const motionCell = tableCell(motion.name, motion.file.path); row.append(motionCell);
+        row.append(tableCell(model.name));
+        const speciesCell = document.createElement('td'); const speciesTag = document.createElement('span'); speciesTag.className = 'tag-pill'; speciesTag.textContent = displayLabel(speciesLabels,species); speciesCell.append(speciesTag); row.append(speciesCell);
+        const weaponCell = document.createElement('td'); const weaponTag = document.createElement('span'); weaponTag.className = 'tag-pill green'; weaponTag.textContent = displayLabel(weaponLabels,weapon); weaponCell.append(weaponTag); row.append(weaponCell);
+        row.append(tableCell(displayLabel(actionLabels,action)));
+        const detailsText = [motion.subaction, motion.direction, ...(motion.tags || [])].filter(Boolean).join(' · ') || '—'; row.append(tableCell(detailsText));
+        row.append(tableCell(origin === 'game' ? `게임 모션 · ${manifest.source.gameId || '추출'}` : displayLabel(originLabels,origin)));
+        row.append(tableCell(`${motion.fps || '—'} / ${motion.frameCount || '—'}`));
+        const flags = document.createElement('td');
+        for (const text of [motion.loop ? 'Loop' : 'One-shot', motion.rootMotion ? 'Root' : 'In Place']) { const pill = document.createElement('span'); pill.className = 'tag-pill'; pill.textContent = text; flags.append(pill, document.createTextNode(' ')); }
+        row.append(flags); row.append(tableCell(Number.isFinite(motion.quality) ? `${motion.quality}%` : '—'));
+        const actionCell = document.createElement('td'); const addButton = document.createElement('button'); addButton.className = 'quiet-button tiny use-motion'; addButton.textContent = '＋ Story'; const editButton = document.createElement('button'); editButton.className = 'quiet-button tiny edit-motion'; editButton.textContent = '라벨'; actionCell.append(addButton, editButton); row.append(actionCell); rows.append(row);
+      }
+      document.getElementById('manifestStatus').textContent = manifest.source.gameId || manifest.source.extractor || manifest.source.kind;
+      document.getElementById('motionSearch').value = ''; filterMotions();
+    }
+    document.getElementById('importManifest').addEventListener('click', () => document.getElementById('manifestInput').click());
+    document.getElementById('manifestInput').addEventListener('change', async event => {
+      const file = event.target.files[0]; if (!file) return;
+      try { const manifest = JSON.parse(await file.text()); importMotionManifest(manifest); currentManifest = manifest; toast('추출 결과를 모델 그룹과 모션 분류에 연결했습니다.'); }
+      catch (error) { toast(`매니페스트를 읽지 못했습니다: ${error.message}`); }
+      event.target.value = '';
+    });
+    function filterMotions() {
+      const values = Object.fromEntries(filterIds.map(id => [id, document.getElementById(id).value.toLowerCase()]));
+      const rows = [...document.querySelectorAll('#motionRows tr')];
+      let visible = 0;
+      rows.forEach(row => {
+        const searchMatch = !values.motionSearch || row.textContent.toLowerCase().includes(values.motionSearch);
+        const matches = searchMatch && ['group','species','weapon','action','detail','origin'].every(key => !values[key + 'Filter'] || row.dataset[key] === values[key + 'Filter']);
+        row.hidden = !matches; if (matches) visible++;
+      });
+      document.getElementById('visibleMotionCount').textContent = `${visible} motions`;
+    }
+    filterIds.forEach(id => document.getElementById(id).addEventListener(id === 'motionSearch' ? 'input' : 'change', filterMotions));
+    function openMotionEditor(row) {
+      selectedMotionRow = row;
+      const groupSelect = document.getElementById('labelModelGroup'); groupSelect.replaceChildren();
+      document.querySelectorAll('[data-group-card]').forEach(card => groupSelect.add(new Option(card.querySelector('b').textContent, card.dataset.groupCard)));
+      groupSelect.value = row.dataset.group;
+      document.getElementById('editingMotionName').textContent = row.cells[0].textContent;
+      document.getElementById('labelModelName').value = row.cells[1].textContent;
+      document.getElementById('labelSpecies').value = row.dataset.species;
+      document.getElementById('labelWeapon').value = row.dataset.weapon;
+      document.getElementById('labelAction').value = row.dataset.action;
+      document.getElementById('labelSubaction').value = row.dataset.subaction || '';
+      document.getElementById('labelDirection').value = row.dataset.direction || '';
+      document.getElementById('labelOrigin').value = row.dataset.origin;
+      document.getElementById('labelQuality').value = row.cells[9].textContent.replace('%','').replace('—','');
+      document.getElementById('labelLoop').checked = row.dataset.loop === 'true';
+      document.getElementById('labelRootMotion').checked = row.dataset.rootMotion === 'true';
+      let tags = []; try { tags = JSON.parse(row.dataset.tags || '[]'); } catch {}
+      document.getElementById('labelTags').value = tags.join(', ');
+      const editor = document.getElementById('motionLabelEditor'); editor.hidden = false; editor.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }
+    document.getElementById('labelModelGroup').addEventListener('change', event => {
+      const card = [...document.querySelectorAll('[data-group-card]')].find(item => item.dataset.groupCard === event.target.value);
+      if (card) document.getElementById('labelModelName').value = card.querySelector('b').textContent;
+      const sibling = [...document.querySelectorAll('#motionRows tr')].find(row => row.dataset.group === event.target.value);
+      document.getElementById('labelSpecies').value = sibling?.dataset.species || 'other';
+    });
+    function updateLibraryRowCell(cell, text, color = '') {
+      cell.replaceChildren(); const tag = document.createElement('span'); tag.className = `tag-pill ${color}`.trim(); tag.textContent = text; cell.append(tag);
+    }
+    function refreshLibraryFilters() {
+      const rows = [...document.querySelectorAll('#motionRows tr')];
+      const previous = Object.fromEntries(['groupFilter','speciesFilter','weaponFilter','actionFilter','detailFilter','originFilter'].map(id => [id,document.getElementById(id).value]));
+      const groups = new Map([...document.querySelectorAll('[data-group-card]')].map(card => [card.dataset.groupCard,card.querySelector('b').textContent]));
+      resetSelectOptions('groupFilter','전체 그룹',[...groups.keys()],value => groups.get(value));
+      resetSelectOptions('speciesFilter','전체',[...new Set(rows.map(row => row.dataset.species))],value => displayLabel(speciesLabels,value));
+      resetSelectOptions('weaponFilter','전체',[...new Set(rows.map(row => row.dataset.weapon))],value => displayLabel(weaponLabels,value));
+      resetSelectOptions('actionFilter','전체',[...new Set(rows.map(row => row.dataset.action))],value => displayLabel(actionLabels,value));
+      resetSelectOptions('detailFilter','전체',[...new Set(rows.map(row => row.dataset.detail))],value => displayLabel({},value));
+      resetSelectOptions('originFilter','전체',[...new Set(rows.map(row => row.dataset.origin))],value => displayLabel(originLabels,value));
+      for (const [id,value] of Object.entries(previous)) if ([...document.getElementById(id).options].some(option => option.value === value)) document.getElementById(id).value = value;
+    }
+    document.getElementById('saveMotionLabels').addEventListener('click', () => {
+      const row = selectedMotionRow; if (!row) return;
+      const oldGroup = row.dataset.group; const modelId = document.getElementById('labelModelGroup').value || oldGroup;
+      const modelName = document.getElementById('labelModelName').value.trim() || row.cells[1].textContent;
+      const species = document.getElementById('labelSpecies').value; const weapon = document.getElementById('labelWeapon').value;
+      const action = document.getElementById('labelAction').value; const subaction = document.getElementById('labelSubaction').value.trim();
+      const direction = document.getElementById('labelDirection').value.trim(); const origin = document.getElementById('labelOrigin').value;
+      const qualityInput = document.getElementById('labelQuality').value; const parsedQuality = Number(qualityInput); const quality = qualityInput === '' || !Number.isFinite(parsedQuality) ? null : Math.max(0,Math.min(100,parsedQuality));
+      const tags = document.getElementById('labelTags').value.split(',').map(tag => tag.trim()).filter(Boolean);
+      const linkedRows = [...document.querySelectorAll('#motionRows tr')].filter(item => item.dataset.group === modelId || item === row);
+      const groupCard = [...document.querySelectorAll('[data-group-card]')].find(card => card.dataset.groupCard === modelId);
+      if (groupCard) {
+        groupCard.querySelector('b').textContent = modelName;
+        const detail = groupCard.querySelector('small'); if (detail) detail.textContent = `${displayLabel(speciesLabels,species)} · ${linkedRows.length} motions · ${groupCard.dataset.modelFile || '연결 모델'}`;
+      }
+      for (const item of linkedRows) {
+        if (item === row) { item.dataset.group = modelId; item.dataset.weapon = weapon; item.dataset.action = action; item.dataset.subaction = subaction; item.dataset.direction = direction; item.dataset.origin = origin; item.dataset.loop = document.getElementById('labelLoop').checked; item.dataset.rootMotion = document.getElementById('labelRootMotion').checked; item.dataset.tags = JSON.stringify(tags); if (Number.isFinite(quality)) item.cells[9].textContent = `${quality}%`; else item.cells[9].textContent = '—'; }
+        item.dataset.species = species; item.cells[1].textContent = modelName;
+        updateLibraryRowCell(item.cells[2],displayLabel(speciesLabels,species));
+        if (item === row) {
+          updateLibraryRowCell(item.cells[3],displayLabel(weaponLabels,weapon),'green');
+          item.cells[4].textContent = displayLabel(actionLabels,action);
+          item.dataset.detail = tagValue(subaction || direction || 'other');
+          item.cells[5].textContent = [subaction,direction,...tags].filter(Boolean).join(' · ') || '—';
+          item.cells[6].textContent = origin === 'game' ? `게임 모션 · ${currentManifest?.source?.gameId || '추출'}` : displayLabel(originLabels,origin);
+          item.cells[7].textContent = `${item.dataset.fps || '—'} / ${item.dataset.frames || '—'}`;
+          item.cells[8].replaceChildren();
+          for (const label of [item.dataset.loop === 'true' ? 'Loop' : 'One-shot', item.dataset.rootMotion === 'true' ? 'Root' : 'In Place']) { const tag = document.createElement('span'); tag.className = 'tag-pill'; tag.textContent = label; item.cells[8].append(tag,document.createTextNode(' ')); }
+        }
+      }
+      if (currentManifest) {
+        let model = currentManifest.models.find(item => item.id === modelId);
+        if (!model) { model = {id:modelId,name:modelName,species,files:[]}; currentManifest.models.push(model); }
+        model.name = modelName; model.species = species;
+        const motion = currentManifest.motions.find(item => item.id === row.dataset.motionId);
+        if (motion) { motion.modelId = modelId; motion.weapon = weapon; motion.action = action; motion.subaction = subaction; motion.direction = direction; motion.origin = ({mocap:'mocap',game:'game-extraction',keyed:'keyed-animation'})[origin]; motion.loop = row.dataset.loop === 'true'; motion.rootMotion = row.dataset.rootMotion === 'true'; motion.tags = tags; if (quality === null) delete motion.quality; else motion.quality = quality; }
+      }
+      for (const card of document.querySelectorAll('[data-group-card]')) {
+        const groupRows = [...document.querySelectorAll('#motionRows tr')].filter(item => item.dataset.group === card.dataset.groupCard);
+        const model = currentManifest?.models.find(item => item.id === card.dataset.groupCard);
+        if (model) card.querySelector('b').textContent = model.name;
+        const groupSpecies = groupRows[0]?.dataset.species || model?.species || 'other';
+        const detail = card.querySelector('small');
+        if (detail) detail.textContent = `${displayLabel(speciesLabels,groupSpecies)} · ${groupRows.length} motions · ${card.dataset.modelFile || '모델 미지정'}`;
+      }
+      refreshLibraryFilters(); filterMotions(); toast('모델 연결과 모션 라벨을 저장했습니다.');
+    });
+    document.querySelector('.group-cards').addEventListener('click', event => {
+      const card = event.target.closest('[data-group-card]'); if (!card) return;
+      const group = card.dataset.groupCard; const groupFilter = document.getElementById('groupFilter');
+      if (![...groupFilter.options].some(option => option.value === group)) groupFilter.add(new Option(card.querySelector('b').textContent, group));
+      groupFilter.value = group;
+      document.querySelectorAll('[data-group-card]').forEach(item => item.classList.toggle('active', item === card)); filterMotions();
+    });
+    document.getElementById('motionRows').addEventListener('click', event => {
+      const row = event.target.closest('tr'); if (!row) return;
+      document.querySelectorAll('#motionRows tr').forEach(item => item.style.outline = item === row ? '1px solid #789650' : '');
+      if (event.target.closest('.use-motion')) addStoryClip(row.cells[0].textContent.replace(/\.(bvh|fbx)$/i, ''));
+      if (event.target.closest('.edit-motion')) openMotionEditor(row);
+    });
+    document.getElementById('importMotion').addEventListener('click', () => document.getElementById('libraryImportInput').click());
+    let importedMotionIndex = 0;
+    async function addLibraryMotionFile(file) {
+      if ([...document.querySelectorAll('#motionRows tr')].some(row => row.dataset.file === file.name)) { toast(`${file.name}은 이미 라이브러리에 있습니다.`); return; }
+      const format = file.name.split('.').pop().toLowerCase();
+      let fps = '', frames = '', boneCount = '';
+      if (format === 'bvh') {
+        try { const bvh = BvhIO.parse(await file.text()); fps = bvh.fps; frames = bvh.frameCount; boneCount = bvh.nodes.length; }
+        catch (error) { toast(`BVH를 읽지 못했습니다: ${error.message}`); return; }
+      }
+      const groupId = 'unlinked';
+      let group = [...document.querySelectorAll('[data-group-card]')].find(card => card.dataset.groupCard === groupId);
+      if (!group) {
+        group = document.createElement('div'); group.className = 'group-card'; group.dataset.groupCard = groupId; group.dataset.modelFile = '모델 미연결';
+        const title = document.createElement('b'); title.textContent = '미연결 모델'; const detail = document.createElement('small'); detail.textContent = '기타 · 0 motions · 모델 파일 미지정'; group.append(title,detail); document.querySelector('.group-cards').append(group);
+      }
+      const row = document.createElement('tr');
+      Object.assign(row.dataset,{group:groupId,species:'other',weapon:'other',action:'other',detail:'other',origin:({mocap:'mocap',game:'game',keyed:'keyed'})[document.getElementById('sourceOrigin').value] || 'mocap',fps:String(fps),frames:String(frames),loop:'false',rootMotion:'false',motionId:`local.${Date.now()}.${++importedMotionIndex}`,file:file.name,format,subaction:'',direction:'',tags:'[]'});
+      const stem = file.name.replace(/\.[^.]+$/,'');
+      row.append(tableCell(file.name,file.name),tableCell('미연결 모델'));
+      for (const [label,color] of [['기타',''],['기타','green']]) { const cell = document.createElement('td'); const tag = document.createElement('span'); tag.className = `tag-pill ${color}`.trim(); tag.textContent = label; cell.append(tag); row.append(cell); }
+      row.append(tableCell('기타'),tableCell('—'),tableCell(format === 'bvh' ? 'BVH 모션' : '미파싱 파일'),tableCell(fps ? `${Number(fps).toFixed(2)} / ${frames}` : '— / —'));
+      const flags = document.createElement('td'); for (const label of ['One-shot','In Place']) { const pill = document.createElement('span'); pill.className = 'tag-pill'; pill.textContent = label; flags.append(pill,document.createTextNode(' ')); } row.append(flags,tableCell('—'));
+      const actionCell = document.createElement('td'); const storyButton = document.createElement('button'); storyButton.className = 'quiet-button tiny use-motion'; storyButton.textContent = '＋ Story'; const editButton = document.createElement('button'); editButton.className = 'quiet-button tiny edit-motion'; editButton.textContent = '라벨'; actionCell.append(storyButton,editButton); row.append(actionCell);
+      document.getElementById('motionRows').append(row);
+      if (currentManifest) {
+        if (!currentManifest.models.some(model => model.id === groupId)) currentManifest.models.push({id:groupId,name:'미연결 모델',species:'other',files:[]});
+        currentManifest.motions.push({id:row.dataset.motionId,modelId:groupId,name:stem,file:{path:file.name,format},fps:fps ? Number(fps) : undefined,frameCount:frames ? Number(frames) : undefined,weapon:'other',action:'other',origin:row.dataset.origin === 'game' ? 'game-extraction' : row.dataset.origin === 'keyed' ? 'keyed-animation' : 'mocap',loop:false,rootMotion:false,tags:[]});
+      }
+      group.querySelector('small').textContent = `기타 · ${[...document.querySelectorAll('#motionRows tr')].filter(item => item.dataset.group === groupId).length} motions · ${boneCount ? `${boneCount} BVH bones` : group.dataset.modelFile}`;
+      refreshLibraryFilters(); filterMotions(); toast(format === 'bvh' ? `${file.name} · ${frames} frames, ${Number(fps).toFixed(2)} fps로 등록했습니다.` : `${file.name}을 목록에 등록했습니다. 포맷 파서는 아직 연결되지 않았습니다.`);
+    }
+    document.getElementById('libraryImportInput').addEventListener('change', async event => {
+      for (const file of event.target.files || []) await addLibraryMotionFile(file);
+      event.target.value = '';
+    });
+    document.getElementById('newModelGroup').addEventListener('click', () => {
+      const count = document.querySelectorAll('[data-group-card]').length + 1;
+      const card = document.createElement('div'); card.className = 'group-card active'; card.dataset.groupCard = `new${count}`;
+      card.dataset.modelFile = '모델 미연결';
+      card.innerHTML = `<b contenteditable="true" spellcheck="false">New Model Group ${count}</b><small>모델 연결 대기 · 더블 클릭해 이름 편집</small>`;
+      document.querySelectorAll('[data-group-card]').forEach(item => item.classList.remove('active'));
+      document.querySelector('.group-cards').append(card); toast('모델 그룹을 추가했습니다. 그룹 이름을 눌러 편집하세요.');
+    });
+    document.querySelectorAll('#spineMethod,#spineMode,#neckMethod,#neckMode').forEach(select => select.addEventListener('change', () => toast(`체인 보정 설정: ${select.options[select.selectedIndex].text}`)));
+    document.getElementById('preserveChainEnds').addEventListener('change', event => toast(event.target.checked ? '체인 양끝 회전을 보존합니다.' : '양끝 회전 보존을 해제했습니다.'));
+    document.getElementById('previewChainBtn').addEventListener('click', () => {
+      const axisX = degrees => { const half = degrees * Math.PI / 360; return [Math.sin(half), 0, 0, Math.cos(half)]; };
+      const method = document.getElementById('spineMethod').value;
+      const result = RetargetCore.distributeChainRotations(
+        [
+          {length: 0.24, delta: axisX(-8)},
+          {length: 0.32, delta: axisX(19)},
+          {length: 0.44, delta: axisX(11)}
+        ],
+        [0.18, 0.22, 0.24, 0.26, 0.30],
+        {targetDistribution: method, targetWeights: method === 'custom' ? [0.14,0.17,0.2,0.22,0.27] : undefined}
+      );
+      const parts = result.targetDeltas.map((q, index) => `${index + 1}:${(2 * Math.atan2(q[0], q[3]) * 180 / Math.PI).toFixed(1)}°`);
+      const end = (2 * Math.atan2(result.endRotation[0], result.endRotation[3]) * 180 / Math.PI).toFixed(1);
+      document.getElementById('chainSolvePreview').textContent = `target Δ ${parts.join('  ·  ')}  |  end ${end}°`;
+    });
+    document.getElementById('reduceKeys').addEventListener('click', () => toast('선택된 키 범위에서 중복 키를 줄이는 설정을 적용합니다.'));
+    document.getElementById('smoothKeys').addEventListener('click', () => toast('선택 채널의 곡선을 스무딩하는 설정을 적용합니다.'));
+    document.getElementById('insertKey').addEventListener('click', () => {
+      const row = document.querySelector('.clip.selected')?.closest('.track-row') || document.querySelector('.track-row');
+      const marker = document.createElement('span'); marker.className = 'key-mark'; marker.style.left = `${((frame - 1) / 119) * row.clientWidth}px`; marker.title = `Frame ${frame}`; row.append(marker);
+      const count = document.getElementById('keyCount'); count.textContent = `${parseInt(count.textContent, 10) + 1} keys`; toast(`현재 프레임 ${frame}에 키를 추가했습니다.`);
+    });
+    document.querySelectorAll('.toolbar-group button').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.toolbar-group button').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); toast(`${button.dataset.view} 뷰`); }));
+    document.querySelectorAll('.inspector-tabs button').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('.inspector-tabs button').forEach(item => item.classList.toggle('active', item === button));
+      document.querySelectorAll('.panel-content').forEach(panel => panel.hidden = panel.id !== button.dataset.tab);
+    }));
+    document.querySelectorAll('input[type="range"][data-output]').forEach(input => input.addEventListener('input', () => {
+      document.getElementById(input.dataset.output).textContent = input.value + (input.dataset.suffix || '%');
+    }));
+    document.getElementById('toggleRig').addEventListener('click', event => { const hidden = document.getElementById('skeleton').classList.toggle('no-controls'); document.querySelectorAll('.rig-control').forEach(el => el.style.display = hidden ? 'none' : ''); event.currentTarget.classList.toggle('selected', !hidden); });
+    const contactMarkers = document.getElementById('contactMarkers');
+    const markersToggle = document.getElementById('markersToggle');
+    document.getElementById('toggleContacts').addEventListener('click', () => { markersToggle.checked = !markersToggle.checked; markersToggle.dispatchEvent(new Event('change')); });
+    markersToggle.addEventListener('change', () => { contactMarkers.style.display = markersToggle.checked ? '' : 'none'; document.getElementById('toggleContacts').classList.toggle('selected', markersToggle.checked); });
+    document.getElementById('feetContact').addEventListener('change', event => { document.getElementById('hudContact').textContent = event.target.checked ? 'Enabled' : 'Disabled'; if (!event.target.checked) contactMarkers.style.opacity = '.25'; else contactMarkers.style.opacity = '1'; });
+    document.getElementById('mirrorMotion').addEventListener('change', event => toast(event.target.checked ? '좌우 본 대응을 뒤집는 옵션을 선택했습니다.' : '원본 좌우 대응을 사용합니다.'));
+    document.getElementById('addEffector').addEventListener('click', () => { const card = document.createElement('div'); card.className = 'control-card'; card.innerHTML = '<div class="control-row"><label>New Aux Effector</label><span class="subtle tiny">● Active</span></div><div class="slider-block"><div class="control-row"><label>Reach blend</label><output>50%</output></div><input type="range" min="0" max="100" value="50"></div>'; document.getElementById('effectorCard').after(card); toast('Aux effector를 추가했습니다.'); });
+
+    let layerIndex = 3;
+    function selectLayer(card) { document.querySelectorAll('.layer-card').forEach(item => item.classList.toggle('selected', item === card)); }
+    document.getElementById('layerList').addEventListener('click', event => { const card = event.target.closest('.layer-card'); if (card) selectLayer(card); });
+    document.getElementById('addLayer').addEventListener('click', () => {
+      layerIndex++;
+      const card = document.createElement('div'); card.className = 'layer-card'; card.dataset.layer = `Motion Layer ${layerIndex}`;
+      card.innerHTML = `<span class="layer-color"></span><div>Motion Layer ${layerIndex}<small>Additive · full body</small></div><span class="layer-actions">◉　⋯</span>`;
+      document.getElementById('layerList').append(card); selectLayer(card); toast('새 모션 레이어를 만들었습니다.');
+    });
+    document.getElementById('layerWeight').addEventListener('input', event => document.getElementById('layerWeightValue').textContent = `${event.target.value}%`);
+    document.getElementById('soloLayer').addEventListener('change', event => toast(event.target.checked ? '선택 레이어만 재생합니다.' : '전체 레이어 재생으로 돌아갑니다.'));
+    document.getElementById('muteLayer').addEventListener('change', event => toast(event.target.checked ? '선택 레이어를 음소거했습니다.' : '선택 레이어 음소거를 해제했습니다.'));
+
+    let clipIndex = 1;
+    function addStoryClip(name = '') {
+      clipIndex++;
+      const row = document.querySelector('.track-row'); const clip = document.createElement('div'); clip.className = 'clip'; clip.textContent = name || `New Clip ${clipIndex}`; clip.style.left = `${Math.min(4 + clipIndex * 9, 78)}%`; clip.style.width = '17%'; row.append(clip); selectClip(clip); toast(`${clip.textContent}을 Story에 추가했습니다.`);
+    }
+    document.getElementById('addClip').addEventListener('click', () => addStoryClip());
+    document.getElementById('addTrack').addEventListener('click', () => {
+      const row = document.createElement('div'); row.className = 'track-row'; row.innerHTML = `<div class="track-name"><em></em> New Track ${document.querySelectorAll('.track-row').length + 1}</div>`; document.getElementById('tracks').append(row); toast('Story 트랙을 추가했습니다.');
+    });
+    function selectClip(clip) { document.querySelectorAll('.clip').forEach(item => item.classList.toggle('selected', item === clip)); }
+    document.getElementById('tracks').addEventListener('click', event => { const clip = event.target.closest('.clip'); if (clip) selectClip(clip); });
+
+    const scrubber = document.getElementById('scrubber');
+    let frame = Number(scrubber.value), playing = false, playTimer;
+    function setFrame(value) {
+      frame = Math.max(1, Math.min(totalFrames, Number(value)));
+      scrubber.value = frame;
+      document.getElementById('frameNumber').textContent = String(frame).padStart(4, '0');
+      document.getElementById('hudFrame').textContent = String(frame).padStart(4, '0');
+      const p = (frame - 1) / Math.max(1, totalFrames - 1);
+      const tracksWidth = document.getElementById('tracks').clientWidth;
+      document.getElementById('playhead').style.left = `${120 + (tracksWidth - 120) * p}px`;
+      if (sourceMotion) renderBVHFrame(frame - 1);
+    }
+    scrubber.addEventListener('input', event => setFrame(event.target.value));
+    function togglePlay() {
+      playing = !playing; document.getElementById('playBtn').textContent = playing ? 'Ⅱ' : '▶';
+      if (playing) playTimer = setInterval(() => setFrame(frame >= totalFrames ? 1 : frame + 1), 1000 / (sourceMotion?.fps || 24)); else clearInterval(playTimer);
+    }
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+    document.getElementById('goStart').addEventListener('click', () => setFrame(1));
+    document.getElementById('goEnd').addEventListener('click', () => setFrame(totalFrames));
+    document.getElementById('prevFrame').addEventListener('click', () => setFrame(frame - 1));
+    document.getElementById('nextFrame').addEventListener('click', () => setFrame(frame + 1));
+    document.addEventListener('keydown', event => { if (event.code === 'Space' && !['INPUT','SELECT','BUTTON'].includes(document.activeElement.tagName)) { event.preventDefault(); togglePlay(); } });
+    setFrame(frame);
+  </script>
+</body>
+</html>
