@@ -94,6 +94,29 @@
     .dynamic-bone { stroke: #d9e1ed; stroke-width: 6; stroke-linecap: round; fill: none; opacity: .86; }
     .dynamic-joint { fill: #b8f36b; stroke: #192111; stroke-width: 2; }
     .dynamic-joint.end-site { fill: #79a8ff; }
+    .fbx-renderer-canvas { position:absolute; inset:0; z-index:0; width:100%; height:100%; display:block; touch-action:none; }
+    .definition-status { border:1px solid var(--border); border-radius:6px; padding:7px 8px; color:var(--muted); font-size:9px; line-height:1.5; margin-bottom:9px; }
+    .definition-board { border:1px solid var(--border); background:#15181e; border-radius:7px; padding:7px; }
+    .definition-figure { width:100%; display:block; max-height:340px; }
+    .definition-skeleton { fill:none; stroke:#778395; stroke-width:6; stroke-linecap:round; stroke-linejoin:round; opacity:.72; }
+    .definition-slot { cursor:pointer; }
+    .definition-slot circle { fill:#282e37; stroke:#8290a2; stroke-width:2; transition:.15s; }
+    .definition-slot text { fill:#cbd1db; font:9px sans-serif; paint-order:stroke; stroke:#15181e; stroke-width:2px; stroke-linejoin:round; }
+    .definition-slot:hover circle,.definition-slot.selected circle { fill:#3d4c31; stroke:#b8f36b; r:9px; }
+    .definition-slot.mapped circle { fill:#b8f36b; stroke:#1d2617; }
+    .definition-slot.mapped text { fill:#e8ffd1; }
+    .definition-legend { color:var(--muted); font-size:9px; margin:6px 2px 2px; min-height:13px; }
+    .fbx-bone-picker { margin-top:9px; border:1px solid var(--border); border-radius:6px; padding:7px; }
+    .fbx-bone-list { max-height:170px; overflow:auto; margin-top:6px; }
+    .fbx-bone { display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; border:0; border-radius:4px; color:#bec5d0; background:transparent; padding:4px 5px; font:10px ui-monospace,Consolas,monospace; cursor:grab; }
+    .fbx-bone:hover,.fbx-bone.selected { background:#2a303a; color:var(--accent); }
+    .definition-map-list { margin-top:8px; max-height:140px; overflow:auto; }
+    .definition-map-row { display:flex; align-items:center; gap:5px; border-bottom:1px solid #2b3039; padding:4px 1px; font-size:9px; }
+    .definition-map-row .slot-name { width:76px; flex:none; color:#abb4c1; }
+    .definition-map-row .mapped-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--accent); flex:1; }
+    .definition-map-row .mapped-name.empty { color:#747d8b; }
+    .definition-map-row.selected { background:#252c22; }
+    .definition-map-row.optional .slot-name { color:#858f9e; }
     .rig-control { fill: #11161b; stroke: #b8f36b; stroke-width: 2.5; }
     .rig-control.aux { stroke: #c09cff; fill: #251d32; }
     .foot-marker { fill: #79a8ff22; stroke: #79a8ff; stroke-width: 2; }
@@ -227,6 +250,9 @@
     .toast.show { transform: translate(-50%, 0); opacity: 1; }
     @media (max-width: 1120px) { .workspace { grid-template-columns: 245px minmax(320px,1fr) 270px; } .brand { min-width: 150px; } .project-name { display: none; } .topnav button { padding: 6px 5px; font-size: 10px; } .top-actions { gap: 4px; } .export-layout { grid-template-columns: minmax(360px,1fr) 300px; } }
   </style>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}
+  </script>
 </head>
 <body>
   <div class="app">
@@ -248,16 +274,16 @@
         <section class="section">
           <div class="section-head"><span class="section-title">Characters</span><button class="quiet-button tiny" id="clearFiles">초기화</button></div>
           <div class="asset-card">
-            <div class="asset-icon">SRC</div><div class="asset-meta"><div class="asset-name" id="sourceName">Walk_Cycle.bvh</div><div class="asset-detail" id="sourceInfo">Source · 30 fps · 180 frames</div></div>
+            <div class="asset-icon">SRC</div><div class="asset-meta"><div class="asset-name" id="sourceName">Source FBX / BVH</div><div class="asset-detail" id="sourceInfo">애니메이션 소스를 불러오세요</div></div>
             <button class="asset-load" data-file="source" title="소스 파일 선택">＋</button>
           </div>
           <div class="asset-card target">
-            <div class="asset-icon">TGT</div><div class="asset-meta"><div class="asset-name" id="targetName">Hero_Rig.glb</div><div class="asset-detail" id="targetInfo">Target · 24 bones</div></div>
+            <div class="asset-icon">TGT</div><div class="asset-meta"><div class="asset-name" id="targetName">Target Character.fbx</div><div class="asset-detail" id="targetInfo">캐릭터 FBX를 불러오세요</div></div>
             <button class="asset-load" data-file="target" title="타깃 파일 선택">＋</button>
           </div>
           <div class="drop-note">모션 또는 캐릭터 파일을 여기에 놓기</div>
-          <input id="sourceInput" type="file" accept=".bvh,.fbx,.glb,.gltf" hidden>
-          <input id="targetInput" type="file" accept=".bvh,.fbx,.glb,.gltf,.blend" hidden>
+          <input id="sourceInput" type="file" accept=".fbx,.bvh" hidden>
+          <input id="targetInput" type="file" accept=".fbx,.bvh" hidden>
           <details class="ingest-details" id="ingestDetails">
             <summary>모캡 / 소스 테이크 정리</summary>
             <div class="ingest-body">
@@ -270,7 +296,40 @@
           </details>
         </section>
         <section class="section">
-          <div class="section-head"><span class="section-title">Bone Mapping</span><button class="button small" id="autoMap">자동 매핑</button></div>
+          <div class="section-head"><span class="section-title">Character Definition</span><button class="button small" id="autoMapDefinition">자동 배치</button></div>
+          <div class="definition-status" id="definitionStatus">대상 FBX의 본을 그림 슬롯에 끌어다 놓거나, 슬롯을 먼저 선택한 뒤 본 목록에서 선택하세요. 기본 15개 슬롯을 채운 뒤 Characterize 합니다.</div>
+          <div class="definition-board">
+            <svg class="definition-figure" id="definitionFigure" viewBox="0 0 300 322" role="img" aria-label="휴머노이드 Character Definition 본 슬롯">
+              <path class="definition-skeleton" d="M150 51 L150 104 L150 169 M150 104 L111 112 L80 137 L52 159 M150 104 L189 112 L220 137 L248 159 M150 169 L130 204 L123 245 L109 286 M150 169 L170 204 L177 245 L191 286"/>
+              <ellipse cx="150" cy="31" rx="17" ry="21" fill="none" stroke="#778395" stroke-width="4"/>
+              <g class="definition-slot" data-definition-slot="Head" transform="translate(150 48)"><circle r="6"/><text x="10" y="-4">Head</text></g>
+              <g class="definition-slot" data-definition-slot="Spine" transform="translate(150 104)"><circle r="6"/><text x="10" y="-4">Spine</text></g>
+              <g class="definition-slot" data-definition-slot="Hips" transform="translate(150 169)"><circle r="6"/><text x="10" y="-4">Hips</text></g>
+              <g class="definition-slot" data-definition-slot="LeftArm" transform="translate(111 112)"><circle r="6"/><text x="-42" y="-6">L Arm</text></g>
+              <g class="definition-slot" data-definition-slot="LeftForeArm" transform="translate(80 137)"><circle r="6"/><text x="-58" y="-6">L Forearm</text></g>
+              <g class="definition-slot" data-definition-slot="LeftHand" transform="translate(52 159)"><circle r="6"/><text x="-48" y="14">L Hand</text></g>
+              <g class="definition-slot" data-definition-slot="RightArm" transform="translate(189 112)"><circle r="6"/><text x="9" y="-6">R Arm</text></g>
+              <g class="definition-slot" data-definition-slot="RightForeArm" transform="translate(220 137)"><circle r="6"/><text x="9" y="-6">R Forearm</text></g>
+              <g class="definition-slot" data-definition-slot="RightHand" transform="translate(248 159)"><circle r="6"/><text x="9" y="14">R Hand</text></g>
+              <g class="definition-slot" data-definition-slot="LeftUpLeg" transform="translate(130 204)"><circle r="6"/><text x="-58" y="-4">L UpLeg</text></g>
+              <g class="definition-slot" data-definition-slot="LeftLeg" transform="translate(123 245)"><circle r="6"/><text x="-50" y="-4">L Leg</text></g>
+              <g class="definition-slot" data-definition-slot="LeftFoot" transform="translate(109 286)"><circle r="6"/><text x="-52" y="14">L Foot</text></g>
+              <g class="definition-slot" data-definition-slot="RightUpLeg" transform="translate(170 204)"><circle r="6"/><text x="9" y="-4">R UpLeg</text></g>
+              <g class="definition-slot" data-definition-slot="RightLeg" transform="translate(177 245)"><circle r="6"/><text x="9" y="-4">R Leg</text></g>
+              <g class="definition-slot" data-definition-slot="RightFoot" transform="translate(191 286)"><circle r="6"/><text x="9" y="14">R Foot</text></g>
+            </svg>
+            <div class="definition-legend" id="definitionLegend">슬롯을 먼저 선택한 뒤 본 목록에서 선택하거나, 본을 그림 슬롯으로 드래그하세요.</div>
+          </div>
+          <div class="fbx-bone-picker">
+            <div class="control-row"><label>Target skeleton hierarchy</label><span class="subtle tiny" id="definitionBoneCount">0 bones</span></div>
+            <input id="boneSearch" type="search" placeholder="본 이름 검색" style="width:100%;margin-top:5px">
+            <div class="fbx-bone-list" id="fbxBoneList"></div>
+          </div>
+          <div class="definition-map-list" id="definitionMapList"></div>
+          <button class="button primary" id="characterizeBtn" style="width:100%;margin-top:9px">Characterize</button>
+        </section>
+        <section class="section">
+          <div class="section-head"><span class="section-title">Source Semantic Map</span><button class="button small" id="autoMap">소스 자동 매핑</button></div>
           <div class="auto-row"><span class="subtle">휴머노이드 · Custom map</span><span class="map-progress"><span id="mapCount">18 / 24</span><span class="progress-track"><span class="progress-fill" id="mapProgress"></span></span></span></div>
           <div id="mappingRows"></div>
           <button class="quiet-button tiny" id="showAllBones">＋ 전체 본 매핑 보기</button>
@@ -519,7 +578,10 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
     }
-    let sourceMotion = null, targetSkeleton = null, retargetedMotion = null, retargetPreview = null, totalFrames = 120;
+    let sourceMotion = null, targetSkeleton = null, sourceFBX = null, targetFBX = null;
+    let sourceFBXStats = null, targetFBXStats = null, activeFbxAsset = null, activeFbxView = null, fbxViewerPromise = null;
+    let retargetedMotion = null, retargetPreview = null, totalFrames = 120;
+    function loadFBXViewer() { fbxViewerPromise ||= import('./fbx-viewer.js'); return fbxViewerPromise; }
     function downloadJson(value, filename) {
       const blob = new Blob([JSON.stringify(value, null, 2)], {type: 'application/json'});
       const url = URL.createObjectURL(blob);
@@ -541,9 +603,146 @@
     const mappingRows = document.getElementById('mappingRows');
     let expandedMap = false;
     const mapAssignments = new Map(mapData);
-    function mappingChoices() { return sourceMotion ? ['— 미지정 —', ...sourceMotion.nodes.filter(node => node.type !== 'End Site').map(node => node.name)] : boneOptions; }
+    const definitionSlots = ['Hips','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','Spine','LeftArm','LeftForeArm','LeftHand','RightArm','RightForeArm','RightHand','Head'];
+    const definitionOptionalSlots = ['Neck','Spine1','Spine2','Spine3','Spine4','Spine5','Spine6','Spine7','Spine8','Spine9','LeftToeBase','RightToeBase'];
+    const allDefinitionSlots = [...definitionSlots,...definitionOptionalSlots];
+    const definitionAliases = {
+      Hips:['hips','hip','pelvis','root'], Spine:['spine','chest','torso'], Head:['head'], Neck:['neck'],
+      Spine1:['spine1','spine01'], Spine2:['spine2','spine02'], Spine3:['spine3','spine03'], Spine4:['spine4','spine04'], Spine5:['spine5','spine05'],
+      Spine6:['spine6','spine06'], Spine7:['spine7','spine07'], Spine8:['spine8','spine08'], Spine9:['spine9','spine09'],
+      LeftUpLeg:['leftupleg','leftupperleg','leftthigh','thighleft','thighl','upperlegleft','upperlegl'],
+      RightUpLeg:['rightupleg','rightupperleg','rightthigh','thighright','thighr','upperlegright','upperlegr'],
+      LeftLeg:['leftleg','leftcalf','calfleft','calfl','lowerlegleft','lowerlegl','shinl'],
+      RightLeg:['rightleg','rightcalf','calfright','calfr','lowerlegright','lowerlegr','shinr'],
+      LeftFoot:['leftfoot','footleft','footl','lfoot'], RightFoot:['rightfoot','footright','footr','rfoot'],
+      LeftArm:['leftarm','upperarmleft','leftupperarm','upperarml'], RightArm:['rightarm','upperarmright','rightupperarm','upperarmr'],
+      LeftForeArm:['leftforearm','forearmleft','lowerarmleft','lowerarml','forearml'], RightForeArm:['rightforearm','forearmright','lowerarmright','lowerarmr','forearmr'],
+      LeftHand:['lefthand','handleft','handl','lhand'], RightHand:['righthand','handright','handr','rhand'],
+      LeftToeBase:['lefttoebase','toebaseleft','toebasel'], RightToeBase:['righttoebase','toebaseright','toebaser']
+    };
+    const definitionMap = new Map();
+    let selectedDefinitionSlot = 'Hips', selectedDefinitionBone = '', definitionLocked = false;
+    const normalizedBoneName = value => String(value).toLowerCase().replace(/[^a-z0-9]/g,'');
+    function updateDefinitionFigure() {
+      const boneById = new Map((targetFBX?.bones || []).map(bone => [bone.id,bone]));
+      document.querySelectorAll('[data-definition-slot]').forEach(slot => {
+        const name = slot.dataset.definitionSlot, boneId = definitionMap.get(name), bone = boneById.get(boneId);
+        slot.classList.toggle('selected',name === selectedDefinitionSlot); slot.classList.toggle('mapped',Boolean(bone));
+        slot.title = `${name}${bone ? ` ← ${bone.name}` : ' · unassigned'}`;
+      });
+      const list = document.getElementById('definitionMapList'); list.replaceChildren();
+      const optionalHeading = document.createElement('div'); optionalHeading.className = 'subtle tiny'; optionalHeading.style.cssText = 'padding:7px 2px 3px'; optionalHeading.textContent = 'Optional · spine / neck / toes'; list.append(optionalHeading);
+      for (const name of allDefinitionSlots) {
+        const optional = definitionOptionalSlots.includes(name);
+        const row = document.createElement('div'); row.className = `definition-map-row${optional ? ' optional' : ''}${selectedDefinitionSlot === name ? ' selected' : ''}`; row.dataset.slotRow = name;
+        const slot = document.createElement('span'); slot.className = 'slot-name'; slot.textContent = name;
+        const mapped = document.createElement('span'); mapped.className = `mapped-name${definitionMap.has(name) ? '' : ' empty'}`; mapped.textContent = boneById.get(definitionMap.get(name))?.name || 'Drop bone here';
+        const clear = document.createElement('button'); clear.className = 'quiet-button tiny clear-definition-slot'; clear.dataset.slot = name; clear.textContent = '×'; clear.disabled = definitionLocked;
+        row.append(slot,mapped,clear); list.append(row);
+      }
+      document.getElementById('definitionLegend').textContent = selectedDefinitionBone
+        ? `선택 본: ${boneById.get(selectedDefinitionBone)?.name || selectedDefinitionBone} · 그림의 슬롯을 클릭해 배치`
+        : `선택 슬롯: ${selectedDefinitionSlot || '없음'} · 계층에서 본을 클릭하거나 슬롯으로 드래그`;
+    }
+    function renderFBXBoneList() {
+      const list = document.getElementById('fbxBoneList'); list.replaceChildren();
+      const bones = targetFBX?.bones || []; document.getElementById('definitionBoneCount').textContent = `${bones.length} bones`;
+      if (!bones.length) { const empty = document.createElement('div'); empty.className = 'subtle tiny'; empty.textContent = '대상 FBX 스켈레톤을 불러오면 본 계층이 표시됩니다.'; list.append(empty); return; }
+      const search = document.getElementById('boneSearch').value.trim().toLowerCase();
+      const visible = bones.filter(bone => !search || bone.name.toLowerCase().includes(search) || bone.id.toLowerCase().includes(search));
+      for (const bone of visible) {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'fbx-bone';
+        button.textContent = bone.name; button.title = bone.id; button.dataset.boneId = bone.id; button.draggable = !definitionLocked;
+        button.style.paddingLeft = `${5 + Math.min(bone.depth || 0,10) * 10}px`;
+        button.classList.toggle('selected',bone.id === selectedDefinitionBone);
+        button.addEventListener('click', () => {
+          if (definitionLocked) return;
+          selectedDefinitionBone = bone.id;
+          if (selectedDefinitionSlot) assignDefinitionBone(selectedDefinitionSlot,bone.id);
+          else { renderFBXBoneList(); updateDefinitionFigure(); }
+        });
+        button.addEventListener('dragstart', event => { event.dataTransfer.setData('text/plain',bone.id); event.dataTransfer.effectAllowed = 'copy'; selectedDefinitionBone = bone.id; });
+        list.append(button);
+      }
+    }
+    function assignDefinitionBone(slot,boneId) {
+      if (definitionLocked) { toast('Characterized 상태에서는 먼저 Edit Definition을 눌러 해제하세요.'); return; }
+      if (!targetFBX?.bones.some(bone => bone.id === boneId)) return;
+      const duplicate = [...definitionMap.entries()].find(([name,id]) => id === boneId && name !== slot);
+      if (duplicate) { toast(`이 본은 이미 ${duplicate[0]} 슬롯에 배치되어 있습니다.`); return; }
+      definitionMap.set(slot,boneId); selectedDefinitionBone = '';
+      selectedDefinitionSlot = allDefinitionSlots.find(name => !definitionMap.has(name)) || slot;
+      renderFBXBoneList(); updateDefinitionFigure();
+    }
+    function autoMapDefinition() {
+      if (!targetFBX) { toast('먼저 대상 FBX 캐릭터를 불러오세요.'); return; }
+      const used = new Set(); definitionMap.clear();
+      for (const slot of allDefinitionSlots) {
+        const names = definitionAliases[slot] || [];
+        const exact = names.map(alias => targetFBX.bones.find(bone => !used.has(bone.id) && normalizedBoneName(bone.name) === alias)).find(Boolean);
+        const found = exact || targetFBX.bones.find(bone => !used.has(bone.id) && names.some(alias => normalizedBoneName(bone.name).startsWith(alias) || normalizedBoneName(bone.name).endsWith(alias)));
+        if (found) { definitionMap.set(slot,found.id); used.add(found.id); }
+      }
+      document.getElementById('definitionStatus').textContent = `${targetFBX.bones.length}개 FBX 본 · ${definitionMap.size}개 슬롯 자동 배치 · 빠진 슬롯과 계층을 확인한 뒤 Characterize 하세요.`;
+      updateDefinitionFigure(); toast(`${definitionMap.size}개 슬롯을 본 이름으로 자동 배치했습니다. 그림에서 확인·수정하세요.`);
+    }
+    function characterizeDefinition() {
+      if (definitionLocked) {
+        definitionLocked = false; document.getElementById('characterizeBtn').textContent = 'Characterize';
+      document.getElementById('definitionStatus').textContent = '매핑 수정 가능 · 슬롯을 선택하고 본을 배치한 뒤 Characterize 하세요.';
+        renderFBXBoneList(); updateDefinitionFigure(); return;
+      }
+      const missing = definitionSlots.filter(slot => !definitionMap.has(slot));
+      const assigned = [...definitionMap.values()], duplicates = assigned.filter((id,index) => assigned.indexOf(id) !== index);
+      if (missing.length || duplicates.length) {
+        const message = `${missing.length}개 필수 슬롯 미지정${duplicates.length ? ' · 중복 본 매핑 있음' : ''}`;
+        document.getElementById('definitionStatus').textContent = `${message}: ${missing.join(', ') || '중복을 해제하세요.'}`;
+        toast(`Characterize 불가 · ${message}`); return;
+      }
+      const boneById = new Map((targetFBX?.bones || []).map(bone => [bone.id,bone]));
+      const isBelow = (childSlot,parentSlot) => {
+        let node = boneById.get(definitionMap.get(childSlot)); const ancestor = definitionMap.get(parentSlot);
+        while (node) { if (node.id === ancestor) return true; node = boneById.get(node.parentId); }
+        return false;
+      };
+      const links = [['LeftUpLeg','Hips'],['LeftLeg','LeftUpLeg'],['LeftFoot','LeftLeg'],['RightUpLeg','Hips'],['RightLeg','RightUpLeg'],['RightFoot','RightLeg'],['Spine','Hips'],['LeftArm','Spine'],['LeftForeArm','LeftArm'],['LeftHand','LeftForeArm'],['RightArm','Spine'],['RightForeArm','RightArm'],['RightHand','RightForeArm'],['Head','Spine']];
+      const hierarchyWarnings = links.filter(([child,parent]) => !isBelow(child,parent)).map(([child,parent]) => `${child}→${parent}`);
+      definitionLocked = true; document.getElementById('characterizeBtn').textContent = 'Edit Definition';
+      document.getElementById('definitionStatus').textContent = `Character Definition valid · 필수 15개 연결${hierarchyWarnings.length ? ` · 계층 확인 필요 ${hierarchyWarnings.join(', ')}` : ' · 계층 연결 확인됨'}. 수정하려면 Edit Definition을 누르세요.`;
+      renderFBXBoneList(); updateDefinitionFigure(); toast('Character Definition이 완료됐습니다.');
+    }
+    document.getElementById('autoMapDefinition').addEventListener('click',autoMapDefinition);
+    document.getElementById('characterizeBtn').addEventListener('click',characterizeDefinition);
+    document.getElementById('boneSearch').addEventListener('input',renderFBXBoneList);
+    document.getElementById('definitionFigure').addEventListener('click',event => {
+      const slot = event.target.closest('[data-definition-slot]')?.dataset.definitionSlot; if (!slot) return;
+      selectedDefinitionSlot = slot;
+      if (selectedDefinitionBone) assignDefinitionBone(slot,selectedDefinitionBone); else updateDefinitionFigure();
+    });
+    document.getElementById('definitionFigure').addEventListener('dragover',event => { if (event.target.closest('[data-definition-slot]') && !definitionLocked) event.preventDefault(); });
+    document.getElementById('definitionFigure').addEventListener('drop',event => {
+      const slot = event.target.closest('[data-definition-slot]')?.dataset.definitionSlot; if (!slot) return;
+      event.preventDefault(); assignDefinitionBone(slot,event.dataTransfer.getData('text/plain'));
+    });
+    document.getElementById('definitionMapList').addEventListener('click',event => {
+      const button = event.target.closest('.clear-definition-slot'); if (!button || definitionLocked) return;
+      definitionMap.delete(button.dataset.slot); selectedDefinitionSlot = button.dataset.slot; updateDefinitionFigure();
+    });
+    document.getElementById('definitionMapList').addEventListener('click',event => {
+      const row = event.target.closest('[data-slot-row]'); if (!row || event.target.closest('.clear-definition-slot')) return;
+      selectedDefinitionSlot = row.dataset.slotRow;
+      if (selectedDefinitionBone) assignDefinitionBone(selectedDefinitionSlot,selectedDefinitionBone); else updateDefinitionFigure();
+    });
+    document.getElementById('definitionMapList').addEventListener('dragover',event => { if (event.target.closest('[data-slot-row]') && !definitionLocked) event.preventDefault(); });
+    document.getElementById('definitionMapList').addEventListener('drop',event => { const row = event.target.closest('[data-slot-row]'); if (!row) return; event.preventDefault(); assignDefinitionBone(row.dataset.slotRow,event.dataTransfer.getData('text/plain')); });
+    renderFBXBoneList(); updateDefinitionFigure();
+    function mappingChoices() {
+      if (sourceMotion) return ['— 미지정 —',...sourceMotion.nodes.filter(node => node.type !== 'End Site').map(node => node.name)];
+      if (sourceFBX) return ['— 미지정 —',...sourceFBX.bones.map(node => node.name)];
+      return boneOptions;
+    }
     function renderMappings() {
-      const rows = expandedMap ? [...mapData, ['Left Hand','hand_l'], ['Right Hand','hand_r'], ['Left Toe','toe_l'], ['Right Toe','toe_r'], ['Left Calf','calf_l'], ['Right Calf','calf_r']] : mapData;
+      const rows = expandedMap ? [...mapData, ['Left ForeArm','lowerarm_l'], ['Right ForeArm','lowerarm_r'], ['Left Hand','hand_l'], ['Right Hand','hand_r'], ['Left Toe','toe_l'], ['Right Toe','toe_r'], ['Left Calf','calf_l'], ['Right Calf','calf_r']] : mapData;
       mappingRows.replaceChildren();
       const choices = mappingChoices();
       for (const [label, fallback] of rows) {
@@ -581,19 +780,20 @@
       const editButton = document.createElement('button'); editButton.className = 'quiet-button tiny edit-motion'; editButton.textContent = '라벨'; row.cells[10].append(editButton);
     });
     function autoMapBones() {
-      const nodes = (sourceMotion?.nodes || []).filter(node => node.type !== 'End Site');
+      const nodes = sourceMotion ? sourceMotion.nodes.filter(node => node.type !== 'End Site') : (sourceFBX?.bones || []);
       if (!nodes.length) { for (const [label,value] of mapData) mapAssignments.set(label,value); renderMappings(); toast('BVH를 불러오면 파일의 실제 본 이름으로 자동 매핑할 수 있습니다.'); return; }
       const normalize = value => value.toLowerCase().replace(/[^a-z0-9]/g,'');
       const aliases = {
         Hips:['hips','hip','pelvis','root'], Spine:['spine','spine1','spine01','abdomen'], Chest:['chest','upperchest','spine2','spine02','spine3','spine03'],
         Neck:['neck'], Head:['head'], 'Left Arm':['leftarm','upperarmleft','leftupperarm','lupperarm','upperarml'], 'Right Arm':['rightarm','upperarmright','rightupperarm','rupperarm','upperarmr'],
+        'Left ForeArm':['leftforearm','forearmleft','lowerarmleft','lowerarml','forearml'], 'Right ForeArm':['rightforearm','forearmright','lowerarmright','lowerarmr','forearmr'],
         'Left Leg':['leftupleg','leftthigh','thighleft','lthigh','thighl'], 'Right Leg':['rightupleg','rightthigh','thighright','rthigh','thighr'],
         'Left Foot':['leftfoot','footleft','lfoot','footl'], 'Right Foot':['rightfoot','footright','rfoot','footr'],
         'Left Hand':['lefthand','handleft','lhand','handl'], 'Right Hand':['righthand','handright','rhand','handr'],
         'Left Toe':['lefttoe','toeleft','ltoe','toel'], 'Right Toe':['righttoe','toeright','rtoe','toer'],
         'Left Calf':['leftleg','leftcalf','calfleft','lcalf','calfl'], 'Right Calf':['rightleg','rightcalf','calfright','rcalf','calfr']
       };
-      const rows = [...mapData, ['Left Hand','hand_l'], ['Right Hand','hand_r'], ['Left Toe','toe_l'], ['Right Toe','toe_r'], ['Left Calf','calf_l'], ['Right Calf','calf_r']];
+      const rows = [...mapData, ['Left ForeArm','lowerarm_l'], ['Right ForeArm','lowerarm_r'], ['Left Hand','hand_l'], ['Right Hand','hand_r'], ['Left Toe','toe_l'], ['Right Toe','toe_r'], ['Left Calf','calf_l'], ['Right Calf','calf_r']];
       const used = new Set();
       for (const [label] of rows) {
         const matches = aliases[label] || [];
@@ -601,13 +801,23 @@
           || nodes.find(node => !used.has(node.name) && matches.some(alias => normalize(node.name).startsWith(alias) || normalize(node.name).endsWith(alias)));
         if (found) { mapAssignments.set(label,found.name); used.add(found.name); }
       }
-      renderMappings(); toast('BVH 본 이름을 기준으로 자동 매핑했습니다. 결과를 확인하고 필요하면 직접 수정하세요.');
+      renderMappings(); toast(`${sourceFBX ? 'FBX' : 'BVH'} 본 이름을 기준으로 자동 매핑했습니다. 결과를 확인하고 필요하면 직접 수정하세요.`);
     }
     document.getElementById('autoMap').addEventListener('click', autoMapBones);
     document.getElementById('showAllBones').addEventListener('click', (event) => { expandedMap = !expandedMap; event.currentTarget.textContent = expandedMap ? '− 주요 본만 보기' : '＋ 전체 본 매핑 보기'; renderMappings(); });
 
     document.querySelectorAll('[data-file]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.file + 'Input').click()));
     const svgNamespace = 'http://www.w3.org/2000/svg';
+    async function showFBXAsset(asset,stats) {
+      const module = await loadFBXViewer();
+      activeFbxAsset = asset;
+      activeFbxView = module.mount(document.querySelector('.stage'),asset);
+      activeFbxView.setFrame(Math.max(0,frame - 1),stats?.fps || 30);
+    }
+    function clearFbxView() {
+      if (activeFbxView) activeFbxView.dispose();
+      activeFbxView = null; activeFbxAsset = null;
+    }
     function viewportAxis() { return document.getElementById('axisPreset').value.toLowerCase().includes('z') ? 2 : 1; }
     function buildBVHViewport(bvh) {
       const group = document.getElementById('dynamicSkeleton'); group.replaceChildren();
@@ -649,11 +859,40 @@
     async function loadAsset(kind, file) {
       if (!file) return;
       document.getElementById(kind + 'Name').textContent = file.name;
+      if (file.name.toLowerCase().endsWith('.fbx')) {
+        try {
+          const module = await loadFBXViewer(), asset = await module.parseFBX(file), stats = module.animationStats(asset);
+          retargetedMotion = null; retargetPreview = null;
+          if (kind === 'source') {
+            sourceFBX = asset; sourceFBXStats = stats; sourceMotion = null; totalFrames = stats.frameCount;
+            document.getElementById('sourceInfo').textContent = `Source FBX · ${asset.bones.length} bones · ${asset.animations.length} clips${asset.animations.length ? ` · ${stats.fps} fps / ${stats.frameCount} frames` : ''}`;
+            document.getElementById('scrubber').max = totalFrames;
+            document.querySelector('.frame-readout small').textContent = `/ ${String(totalFrames).padStart(4,'0')}`;
+            document.querySelector('.fps').textContent = `${stats.fps} fps`;
+            document.getElementById('exportRange').value = `1 – ${totalFrames}`;
+            document.getElementById('exportName').value = `${file.name.replace(/\.[^.]+$/,'')}_Retarget`;
+            renderMappings(); autoMapBones();
+          } else {
+            targetFBX = asset; targetFBXStats = stats; targetSkeleton = null;
+            document.getElementById('targetInfo').textContent = `Target FBX · ${asset.bones.length} bones · ${asset.animations.length} clips`;
+            definitionMap.clear(); definitionLocked = false; document.getElementById('characterizeBtn').textContent = 'Characterize';
+            renderFBXBoneList(); autoMapDefinition();
+          }
+          await showFBXAsset(asset,stats); setFrame(kind === 'source' ? 1 : frame);
+          document.querySelector('.view-label').textContent = `${file.name}  ·  ${asset.bones.length} BONES  ·  FBX 3D PREVIEW`;
+          toast(`${file.name} FBX 읽기 완료 · ${asset.bones.length} bones · ${asset.animations.length} clips`);
+        } catch (error) {
+          if (kind === 'source') { sourceFBX = null; sourceFBXStats = null; renderMappings(); }
+          else { targetFBX = null; targetFBXStats = null; renderFBXBoneList(); updateDefinitionFigure(); }
+          toast(`FBX를 읽지 못했습니다: ${error.message}`);
+        }
+        return;
+      }
       if (file.name.toLowerCase().endsWith('.bvh')) {
         try {
           const bvh = BvhIO.parse(await file.text()); bvh.fileName = file.name;
           if (kind === 'source') {
-            sourceMotion = bvh; retargetedMotion = null; retargetPreview = null; totalFrames = bvh.frameCount;
+            sourceMotion = bvh; sourceFBX = null; sourceFBXStats = null; retargetedMotion = null; retargetPreview = null; totalFrames = bvh.frameCount;
             document.getElementById('sourceInfo').textContent = `Source · ${bvh.fps.toFixed(2)} fps · ${bvh.frameCount} frames · ${bvh.nodes.length} bones`;
             document.getElementById('scrubber').max = totalFrames;
             document.querySelector('.frame-readout small').textContent = `/ ${String(totalFrames).padStart(4,'0')}`;
@@ -662,21 +901,26 @@
             document.getElementById('exportRange').value = `1 – ${totalFrames}`;
             document.getElementById('exportName').value = `${file.name.replace(/\.[^.]+$/,'')}_Retarget`;
             renderMappings(); autoMapBones();
-            buildBVHViewport(bvh); setFrame(1);
+            if (targetFBX) await showFBXAsset(targetFBX,targetFBXStats);
+            else { clearFbxView(); buildBVHViewport(bvh); }
+            setFrame(1);
           } else {
-            targetSkeleton = bvh; retargetedMotion = null; retargetPreview = null;
+            targetSkeleton = bvh; targetFBX = null; targetFBXStats = null; retargetedMotion = null; retargetPreview = null;
+            renderFBXBoneList(); definitionMap.clear(); updateDefinitionFigure();
             document.getElementById('targetInfo').textContent = `Target · ${bvh.nodes.length} bones · ${bvh.root.name}`;
-            if (!sourceMotion) { buildBVHViewport(bvh); renderBVHFrame(0); }
+            if (sourceFBX) await showFBXAsset(sourceFBX,sourceFBXStats);
+            else { clearFbxView(); const preview = sourceMotion || targetSkeleton; buildBVHViewport(preview); renderBVHFrame(Math.max(0,frame - 1)); }
           }
           toast(`${file.name} BVH 읽기 완료 · ${bvh.nodes.length} bones`);
         } catch (error) {
           if (kind === 'source') {
-            sourceMotion = null; retargetedMotion = null; retargetPreview = null; totalFrames = 120;
+            sourceMotion = null; sourceFBX = null; sourceFBXStats = null; retargetedMotion = null; retargetPreview = null; totalFrames = 120;
             document.getElementById('scrubber').max = totalFrames;
             document.querySelector('.frame-readout small').textContent = '/ 0120';
             renderMappings();
-            if (targetSkeleton) { buildBVHViewport(targetSkeleton); renderBVHFrame(0); }
-            else { document.getElementById('dynamicSkeleton').style.display = 'none'; document.getElementById('skeleton').style.display = ''; }
+            if (targetFBX) await showFBXAsset(targetFBX,targetFBXStats);
+            else if (targetSkeleton) { clearFbxView(); buildBVHViewport(targetSkeleton); renderBVHFrame(0); }
+            else { clearFbxView(); document.getElementById('dynamicSkeleton').style.display = 'none'; document.getElementById('skeleton').style.display = ''; }
             setFrame(1);
           } else { targetSkeleton = null; retargetedMotion = null; retargetPreview = null; }
           document.getElementById(kind + 'Info').textContent = 'BVH parse failed';
@@ -684,7 +928,7 @@
         }
       } else {
         document.getElementById(kind + 'Info').textContent = kind === 'source' ? 'Source · format parser not connected' : 'Target · format parser not connected';
-        toast(`${file.name} 선택됨 · 현재 실제 프레임 읽기는 BVH만 지원합니다.`);
+        toast(`${file.name} 선택됨 · 현재 스켈레톤 파싱은 FBX와 BVH만 지원합니다.`);
       }
     }
     for (const kind of ['source','target']) document.getElementById(kind + 'Input').addEventListener('change', event => loadAsset(kind,event.target.files[0]));
@@ -699,22 +943,28 @@
     });
     document.getElementById('axisPreset').addEventListener('change', () => { const bvh = sourceMotion || targetSkeleton; if (bvh) { bvh._fitCache = {}; renderBVHFrame(Math.max(0, frame - 1)); } });
     document.getElementById('clearFiles').addEventListener('click', () => {
-      sourceMotion = null; targetSkeleton = null; retargetedMotion = null; retargetPreview = null; totalFrames = 120;
+      sourceMotion = null; targetSkeleton = null; sourceFBX = null; targetFBX = null; sourceFBXStats = null; targetFBXStats = null;
+      retargetedMotion = null; retargetPreview = null; totalFrames = 120; definitionMap.clear(); definitionLocked = false; clearFbxView();
+      document.getElementById('characterizeBtn').textContent = 'Characterize';
+      document.getElementById('definitionStatus').textContent = '대상 FBX의 본을 그림 슬롯에 끌어다 놓거나, 슬롯을 먼저 선택한 뒤 본 목록에서 선택하세요. 기본 15개 슬롯을 채운 뒤 Characterize 합니다.';
+      selectedDefinitionSlot = 'Hips'; selectedDefinitionBone = '';
+      renderFBXBoneList(); updateDefinitionFigure();
       document.getElementById('sourceInput').value = ''; document.getElementById('targetInput').value = '';
-      document.getElementById('sourceName').textContent = 'Walk_Cycle.bvh';
-      document.getElementById('targetName').textContent = 'Hero_Rig.glb';
-      document.getElementById('sourceInfo').textContent = 'Source · 30 fps · 180 frames';
-      document.getElementById('targetInfo').textContent = 'Target · 24 bones';
+      document.getElementById('sourceName').textContent = 'Source FBX / BVH';
+      document.getElementById('targetName').textContent = 'Target Character.fbx';
+      document.getElementById('sourceInfo').textContent = '애니메이션 소스를 불러오세요';
+      document.getElementById('targetInfo').textContent = '캐릭터 FBX를 불러오세요';
       document.getElementById('scrubber').max = totalFrames;
       document.querySelector('.frame-readout small').textContent = '/ 0120';
       document.querySelector('.fps').textContent = '24 fps';
       document.querySelectorAll('.ruler span').forEach((mark,index) => mark.textContent = String(24 * index));
-      for (const [label,value] of [...mapData,['Left Hand','hand_l'],['Right Hand','hand_r'],['Left Toe','toe_l'],['Right Toe','toe_r'],['Left Calf','calf_l'],['Right Calf','calf_r']]) mapAssignments.set(label,value); renderMappings();
+      for (const [label,value] of [...mapData,['Left ForeArm','lowerarm_l'],['Right ForeArm','lowerarm_r'],['Left Hand','hand_l'],['Right Hand','hand_r'],['Left Toe','toe_l'],['Right Toe','toe_r'],['Left Calf','calf_l'],['Right Calf','calf_r']]) mapAssignments.set(label,value); renderMappings();
       document.getElementById('dynamicSkeleton').style.display = 'none'; document.getElementById('skeleton').style.display = '';
       setFrame(1); toast('선택한 파일을 초기화했습니다.');
     });
     document.getElementById('retargetBtn').addEventListener('click', () => {
       try {
+        if (sourceFBX || targetFBX) throw new Error('FBX 파싱·재생과 캐릭터 매핑은 연결됐습니다. FBX 모션 전송/FBX 내보내기는 다음 단계이며, 현재 변환 출력은 BVH 소스+대상 조합에서 동작합니다.');
         if (!sourceMotion || !targetSkeleton) throw new Error('소스 BVH와 대상 BVH를 모두 불러오세요.');
         const result = BvhRetarget.retarget(sourceMotion,targetSkeleton,Object.fromEntries(mapAssignments),{
           scaleMode:document.getElementById('scaleMode').value,
@@ -796,6 +1046,7 @@
         source: {file: document.getElementById('sourceName').textContent, origin: document.getElementById('sourceOrigin').value},
         target: {file: document.getElementById('targetName').textContent},
         boneMap: [...mapAssignments.entries()].map(([slot,bone]) => ({slot,bone})),
+        characterDefinition: {profile:'biped',characterized:definitionLocked,slots:Object.fromEntries(definitionMap)},
         chainRetarget: {spine: {sourceSegments: 3, targetSegments: 5, distribution: document.getElementById('spineMethod').value}, neck: {sourceSegments: 1, targetSegments: 2, distribution: document.getElementById('neckMethod').value}},
         retargetSettings: {rootMotion: document.getElementById('rootMotion').value, upAxis: document.getElementById('axisPreset').value, scale: document.getElementById('scaleMode').value, referencePose: document.getElementById('referencePose').value, mirror: document.getElementById('mirrorMotion').checked},
         story: {clips: [...document.querySelectorAll('.clip')].map(clip => clip.textContent), layers: [...document.querySelectorAll('#layerList .layer-card')].map(card => card.dataset.layer)},
@@ -1047,6 +1298,9 @@
       if (format === 'bvh') {
         try { const bvh = BvhIO.parse(await file.text()); fps = bvh.fps; frames = bvh.frameCount; boneCount = bvh.nodes.length; }
         catch (error) { toast(`BVH를 읽지 못했습니다: ${error.message}`); return; }
+      } else if (format === 'fbx') {
+        try { const module = await loadFBXViewer(), asset = await module.parseFBX(file); boneCount = asset.bones.length; if (asset.animations.length) { const stats = module.animationStats(asset); fps = stats.fps; frames = stats.frameCount; } }
+        catch (error) { toast(`FBX를 읽지 못했습니다: ${error.message}`); return; }
       }
       const groupId = 'unlinked';
       let group = [...document.querySelectorAll('[data-group-card]')].find(card => card.dataset.groupCard === groupId);
@@ -1059,7 +1313,7 @@
       const stem = file.name.replace(/\.[^.]+$/,'');
       row.append(tableCell(file.name,file.name),tableCell('미연결 모델'));
       for (const [label,color] of [['기타',''],['기타','green']]) { const cell = document.createElement('td'); const tag = document.createElement('span'); tag.className = `tag-pill ${color}`.trim(); tag.textContent = label; cell.append(tag); row.append(cell); }
-      row.append(tableCell('기타'),tableCell('—'),tableCell(format === 'bvh' ? 'BVH 모션' : '미파싱 파일'),tableCell(fps ? `${Number(fps).toFixed(2)} / ${frames}` : '— / —'));
+      row.append(tableCell('기타'),tableCell('—'),tableCell(format === 'bvh' ? 'BVH 모션' : format === 'fbx' ? `${boneCount} FBX bones · clips` : '미파싱 파일'),tableCell(fps ? `${Number(fps).toFixed(2)} / ${frames}` : '— / —'));
       const flags = document.createElement('td'); for (const label of ['One-shot','In Place']) { const pill = document.createElement('span'); pill.className = 'tag-pill'; pill.textContent = label; flags.append(pill,document.createTextNode(' ')); } row.append(flags,tableCell('—'));
       const actionCell = document.createElement('td'); const storyButton = document.createElement('button'); storyButton.className = 'quiet-button tiny use-motion'; storyButton.textContent = '＋ Story'; const editButton = document.createElement('button'); editButton.className = 'quiet-button tiny edit-motion'; editButton.textContent = '라벨'; actionCell.append(storyButton,editButton); row.append(actionCell);
       document.getElementById('motionRows').append(row);
@@ -1068,7 +1322,8 @@
         currentManifest.motions.push({id:row.dataset.motionId,modelId:groupId,name:stem,file:{path:file.name,format},fps:fps ? Number(fps) : undefined,frameCount:frames ? Number(frames) : undefined,weapon:'other',action:'other',origin:row.dataset.origin === 'game' ? 'game-extraction' : row.dataset.origin === 'keyed' ? 'keyed-animation' : 'mocap',loop:false,rootMotion:false,tags:[]});
       }
       group.querySelector('small').textContent = `기타 · ${[...document.querySelectorAll('#motionRows tr')].filter(item => item.dataset.group === groupId).length} motions · ${boneCount ? `${boneCount} BVH bones` : group.dataset.modelFile}`;
-      refreshLibraryFilters(); filterMotions(); toast(format === 'bvh' ? `${file.name} · ${frames} frames, ${Number(fps).toFixed(2)} fps로 등록했습니다.` : `${file.name}을 목록에 등록했습니다. 포맷 파서는 아직 연결되지 않았습니다.`);
+      refreshLibraryFilters(); filterMotions();
+      toast(format === 'bvh' ? `${file.name} · ${frames} frames, ${Number(fps).toFixed(2)} fps로 등록했습니다.` : format === 'fbx' ? `${file.name} · ${boneCount} bones FBX로 등록했습니다.` : `${file.name}을 목록에 등록했습니다. 포맷 파서는 아직 연결되지 않았습니다.`);
     }
     document.getElementById('libraryImportInput').addEventListener('change', async event => {
       for (const file of event.target.files || []) await addLibraryMotionFile(file);
@@ -1107,7 +1362,7 @@
       const marker = document.createElement('span'); marker.className = 'key-mark'; marker.style.left = `${((frame - 1) / 119) * row.clientWidth}px`; marker.title = `Frame ${frame}`; row.append(marker);
       const count = document.getElementById('keyCount'); count.textContent = `${parseInt(count.textContent, 10) + 1} keys`; toast(`현재 프레임 ${frame}에 키를 추가했습니다.`);
     });
-    document.querySelectorAll('.toolbar-group button').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.toolbar-group button').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); toast(`${button.dataset.view} 뷰`); }));
+    document.querySelectorAll('.toolbar-group button').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('.toolbar-group button').forEach(item => item.classList.remove('selected')); button.classList.add('selected'); activeFbxView?.setView(button.dataset.view); toast(`${button.dataset.view} 뷰`); }));
     document.querySelectorAll('.inspector-tabs button').forEach(button => button.addEventListener('click', () => {
       document.querySelectorAll('.inspector-tabs button').forEach(item => item.classList.toggle('active', item === button));
       document.querySelectorAll('.panel-content').forEach(panel => panel.hidden = panel.id !== button.dataset.tab);
@@ -1159,12 +1414,16 @@
       const p = (frame - 1) / Math.max(1, totalFrames - 1);
       const tracksWidth = document.getElementById('tracks').clientWidth;
       document.getElementById('playhead').style.left = `${120 + (tracksWidth - 120) * p}px`;
-      if (sourceMotion) renderBVHFrame(frame - 1);
+      if (sourceMotion && !activeFbxView) renderBVHFrame(frame - 1);
+      if (activeFbxView) {
+        const stats = activeFbxAsset === sourceFBX ? sourceFBXStats : targetFBXStats;
+        activeFbxView.setFrame(frame - 1,stats?.fps || 30);
+      }
     }
     scrubber.addEventListener('input', event => setFrame(event.target.value));
     function togglePlay() {
       playing = !playing; document.getElementById('playBtn').textContent = playing ? 'Ⅱ' : '▶';
-      if (playing) playTimer = setInterval(() => setFrame(frame >= totalFrames ? 1 : frame + 1), 1000 / (sourceMotion?.fps || 24)); else clearInterval(playTimer);
+      if (playing) playTimer = setInterval(() => setFrame(frame >= totalFrames ? 1 : frame + 1), 1000 / (sourceMotion?.fps || sourceFBXStats?.fps || 24)); else clearInterval(playTimer);
     }
     document.getElementById('playBtn').addEventListener('click', togglePlay);
     document.getElementById('goStart').addEventListener('click', () => setFrame(1));

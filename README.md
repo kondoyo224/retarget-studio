@@ -1,10 +1,10 @@
 # Retarget Studio
 
-모캡과 게임 애니메이션을 가져와 리타게팅하고, 키를 정리하고, 모델별 동작 라이브러리에 분류한 뒤, 검수와 출력을 마치는 작업 도구의 프로토타입입니다. `index.html`을 브라우저에서 열면 실행되며 외부 라이브러리가 필요하지 않습니다.
+모캡과 게임 애니메이션을 가져와 리타게팅하고, 키를 정리하고, 모델별 동작 라이브러리에 분류한 뒤, 검수와 출력을 마치는 작업 도구의 프로토타입입니다. [웹 미리보기](https://kondoyo224.github.io/retarget-studio/). FBX 3D 읽기에는 Three.js를 CDN에서 불러오므로 웹 연결이 필요합니다.
 
 ## 사용자 흐름
 
-1. **가져오기** — BVH 파일을 읽어 스켈레톤 계층과 프레임을 표시하고 재생합니다. FBX/GLB 파일은 아직 파일명만 등록됩니다. 모캡 테이크, 소스 유형, FPS와 프레임 범위도 관리합니다.
+1. **가져오기** — FBX를 읽어 모델·본 계층·첫 애니메이션 클립을 3D 뷰포트에서 확인합니다. 현재 FBX 미리보기 시간축은 30 fps 기준 추정입니다. BVH도 프레임 데이터로 읽고 재생합니다. 모캡 테이크, 출처, FPS와 프레임 범위도 관리합니다.
 2. **리타게팅** — 표준 신체 의미 슬롯에 본을 연결하고, rest pose·축·단위를 보정합니다. IK/FK Control Rig, 발 접촉, Aux Effector로 결과를 조정합니다.
 3. **키 편집** — 채널별 키와 FCurve를 편집하고, 스무딩·노이즈 완화·중복 키 감소를 적용합니다. 레이어와 Story 클립을 구성합니다.
 4. **분류** — 캐릭터 모델을 모델 그룹으로 묶고, 그룹에 연결된 동작을 종·장비·행동·세부 동작·출처로 검색합니다.
@@ -38,18 +38,17 @@
 
 ## 현재 구현 범위
 
-현재는 BVH 계층/프레임 읽기와 재생, 실제 본 이름 선택과 휴머노이드 슬롯 자동 매핑, BVH→BVH 리타게팅, 체인 회전 재분배, 출력 구간/FPS 설정, BVH 다운로드가 연결되어 있습니다. Spine/Neck은 소스·대상 본 경로의 분절 수가 다르면 누적 회전을 대상 체인 길이에 따라 분배합니다. Root translation은 크기 맞춤을 적용할 수 있고, `Extract` 설정은 BVH와 별도로 root translation JSON을 내려받습니다. 모션 파일을 라이브러리에 가져올 수 있으며 BVH만 FPS/프레임 수를 읽습니다. manifest JSON 라벨 편집·출력과 프로젝트 설정 JSON도 동작합니다.
+현재는 FBX 읽기, 모델·첫 애니메이션 클립의 3D 미리보기, 카메라 Orbit/Front/Side 전환, 스켈레톤 계층 표시, 그림 기반 Character Definition 본 배치와 필수 15개 슬롯 검증이 연결되어 있습니다. 슬롯은 그림에서 선택해 본 목록과 연결하거나 본을 끌어 놓을 수 있습니다. 선택 Spine 슬롯을 포함해 최대 10개 Spine 슬롯, Neck과 발가락 슬롯을 추가로 기록할 수 있습니다. Spine 추가 슬롯은 그림 아래 선택 목록에 표시됩니다. BVH 본 이름 자동 매핑과 BVH→BVH 리타게팅, 체인 회전 재분배, 프레임 구간/FPS 설정, BVH 다운로드도 동작합니다. Spine/Neck의 본 수가 다르면 누적 회전을 대상 체인 길이에 따라 분배합니다. Root translation은 크기 맞춤을 적용하고, `Extract` 설정은 별도 root translation JSON으로 내려받습니다. 모션 라이브러리 입력과 REA manifest 라벨 편집/출력도 동작합니다.
 
-이 빌드는 작업 검증용 첫 변환기입니다. 대상 BVH의 첫 프레임을 기준 자세로 사용하고, 소스/대상 체인의 rest-world 회전 기준으로 본 회전을 재표현합니다. 사용자가 기준 자세를 별도로 맞추는 도구와 서로 다른 up-axis/translation-axis 변환은 아직 없으며, 미리보기는 간단한 2D 투영입니다. FBX/GLB 파싱과 출력, Control Rig/IK, 실제 발 접촉 고정, 키 커브 편집, 레이어 합성도 아직 연결되지 않았습니다. 화면에 든 캐릭터·클립·모션 분류는 예시 데이터입니다.
+이 빌드는 작업 검증용 첫 변환기입니다. FBX는 [Three.js FBXLoader](https://threejs.org/docs/pages/FBXLoader.html)로 읽지만, FBX 소스→대상 모션 전송과 FBX 저장은 아직 연결되지 않았습니다. 현재 실제 리타게팅과 출력은 BVH 조합만 지원합니다. FBXLoader는 FBX 7 이상 ASCII 또는 6400 이상 Binary 버전을 대상으로 합니다. BVH 대상 첫 프레임을 기준 자세로 사용하고 본의 rest-world 회전 기준으로 재표현합니다. 별도 기준 자세 편집, FBX 축/단위 변환, Control Rig/IK, 실제 발 접촉 고정, 키 커브 편집과 레이어 합성도 미구현입니다. Three.js 모듈을 CDN에서 가져오므로 웹 연결이 필요합니다. 화면의 모션/분류 데이터는 예시입니다.
 
 ## 권장 구현 순서
 
-1. BVH 소스/대상의 본 축과 기준 자세 보정을 넣고 대표 BVH 리그에서 결과를 검증합니다.
-2. 실제 3D 뷰포트와 휴머노이드/사족/조류 리그 템플릿, 더 많은 본 이름 규칙을 구현합니다.
-3. 2-bone IK, 발 접촉 검출·고정, Control Rig를 실제 프레임 데이터와 연결합니다.
-4. 루트 모션, 2-bone IK, 발 접촉 검출·고정, Aux Effector를 구현합니다.
-5. 키 편집, 레이어 합성, Story 클립 블렌드와 프로젝트 내 모션 데이터 저장을 추가합니다.
-6. 모션 메타데이터의 영구 저장/검색과 품질 검사를 연결합니다.
-7. 이후 FBX/GLB 및 게임별 에셋 추출 어댑터를 추가합니다.
+1. FBX source/target 클립 전송을 연결하고 spine/neck 체인 재분배를 적용합니다.
+2. FBX 기준 자세, 축/단위 변환과 캐릭터 타입별 Character Definition 템플릿을 추가합니다.
+3. FBX 출력 백엔드를 정하고, FBX 결과를 다른 DCC에서 열어 검증합니다.
+4. 2-bone IK, 실제 발 접촉 고정, Control Rig와 Aux Effector를 모션 데이터에 연결합니다.
+5. 키 커브 편집, 레이어 합성, Story 클립 블렌드와 프로젝트 내 모션 저장을 구현합니다.
+6. 모션 메타데이터 영구 저장/검색, 품질 검사와 게임별 에셋 추출 어댑터를 추가합니다.
 
-MotionBuilder의 소스/대상 Spine 개수가 다를 때 체인에 회전을 분배하는 동작과 최대 10개 Spine 슬롯을 정의하는 방식을 참고했습니다. [Spine mapping behavior](https://help.autodesk.com/cloudhelp/2026/ENU/MotionBuilder-Character-Animation/files/Character-Animation/Character-setup/Character-assets/GUID-CD5ED9F8-52DE-4DAA-BABA-38A196BF2466.html) · [Defining a spine](https://help.autodesk.com/cloudhelp/2025/ENU/MotionBuilder-Character-Animation/files/Character-Animation/Character-setup/Character-assets/GUID-0AFB9286-450F-4C8D-A966-841B86BE0A43.html).
+그림 위에서 필수 본을 연결하고 매핑을 검증하는 흐름은 [MotionBuilder Character Mapping](https://help.autodesk.com/cloudhelp/2026/ENU/MotionBuilder-Character-Animation/files/Character-Animation/Character-setup/Character-assets/GUID-81EE03EF-066C-4442-B47A-25E4D43E0203.html)을 참고했습니다. 소스/대상 Spine 개수가 다를 때 체인에 회전을 분배하는 동작과 최대 10개 Spine 슬롯 정의는 [Spine mapping behavior](https://help.autodesk.com/cloudhelp/2026/ENU/MotionBuilder-Character-Animation/files/Character-Animation/Character-setup/Character-assets/GUID-CD5ED9F8-52DE-4DAA-BABA-38A196BF2466.html)와 [Defining a spine](https://help.autodesk.com/cloudhelp/2025/ENU/MotionBuilder-Character-Animation/files/Character-Animation/Character-setup/Character-assets/GUID-0AFB9286-450F-4C8D-A966-841B86BE0A43.html)을 참고했습니다.
